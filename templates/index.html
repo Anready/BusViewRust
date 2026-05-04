@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>BusView</title>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.0/dist/maplibre-gl.css" crossorigin="anonymous"/>
+    <script src="https://unpkg.com/maplibre-gl@4.7.0/dist/maplibre-gl.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/pmtiles@4.3.0/dist/pmtiles.js"></script>
+    <link rel="stylesheet" href="static/css/styles-1.2.0.css"/>
+    <link rel="stylesheet" href="static/css/styles-bar-1.0.8.css" />
+    <script src="static/js/sidebar.js"></script>
+    <link id="favicon" rel="icon" href="static/favicon-light.ico" type="image/x-icon">
+    <script>
+        function setFavicon(scheme) {
+            const link = document.getElementById("favicon");
+            link.href = scheme === "dark" ? "favicon-dark.ico" : "favicon-light.ico";
+        }
+
+        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+        setFavicon(mq.matches ? "dark" : "light");
+        mq.addEventListener("change", e => setFavicon(e.matches ? "dark" : "light"));
+    </script>
+    <meta name="description" content="Track Cyprus public buses in real time on an interactive map. Plan trips, find bus stops, and get accurate live updates.">
+    <meta name="keywords" content="Limassol buses, bus tracker, Cyprus public transport, live bus map, plan trip, Paphos, Nicosia, Larnaca, Cyprus, bus, Bus, tracker, limassol, app for buses, busview, buses limassol, Buses, limassol">
+    <meta property="og:title" content="BusView">
+    <meta property="og:description" content="Track Cyprus buses live on a map. Plan trips and see routes in real time.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://limassolbus.online">
+    <meta property="og:image" content="https://limassolbus.online/favicon_preview.png">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
+    <script src="static/js/theme.js"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JVG08NJ1BD"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-JVG08NJ1BD');
+
+        function toggleTheme() {
+            const newTheme = getTheme() === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+            saveTheme(newTheme);
+            updateThemeButton();
+            location.reload();
+        }
+
+        function updateThemeButton() {
+            const button = document.getElementById('themeToggle');
+            if (button) {
+                button.textContent = getTheme() === 'light' ? '🌙' : '☀️';
+                button.setAttribute('title', getTheme() === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode');
+            }
+        }
+    </script>
+
+    <style>
+        #security-check h2 {
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #blocked-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        #blocked-screen h2 {
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+
+        .retry-btn {
+            background: white;
+            color: #ee5a24;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .retry-btn:hover {
+            background: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+<div id="cf-container">
+    <div id="cf-check">
+        Cloudflare: Bot check...
+        <div id="turnstile-hidden"></div>
+    </div>
+</div>
+
+<div id="blocked-screen">
+    <h2>🚫 Access denied</h2>
+    <p>Unfortunately, we are not sure that you are not a robot</p>
+    <p>This can happen because of Ad-Blocker or another extensions.</p>
+    <button class="retry-btn" onclick="location.reload()">Try again</button>
+</div>
+
+<app-sidebar></app-sidebar>
+<button class="openbtnstatic" onclick="openNav()">☰</button>
+<div class="share-page">
+    <button class="share-button" onclick="shareCurrentPage()" title="Share page">🔗</button>
+</div>
+<div class="theme-controls">
+    <button id="themeToggle" class="theme-toggle" onclick="toggleTheme()" title="Switch Theme">🌙</button>
+</div>
+
+<div class="container">
+    <button id="addButton" class="new-button">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+        </svg>
+    </button>
+    <button id="infoButton" class="info-button hiddenInfo"></button>
+    <div class="custom-select">
+        <div class="select-selected">
+            Select Route
+            <span class="select-arrow"></span>
+        </div>
+        <div class="select-items">
+            <div id="addBusesButton" class="add-buses-button">Add Favourite Buses +</div>
+            <div class="select-items-scroll" id="routeSelect">
+                <!-- Routes will be dynamically populated here -->
+            </div>
+        </div>
+    </div>
+    <div class="error-list" id="errorList">
+        <div id="webView" class="warning" style="background-color: #000000; color: white">GPS is disabled in this browser</div>
+        <div id="warningGps" class="warning" style="background-color: #f44336; color: white"></div>
+        <div id="warning" class="warning">No buses found for this route</div>
+        <div id="warningEmulated" class="warning" style="background-color: #ebd400; color: #090909">You see emulated buses now</div>
+        <div id="warningTimetable" class="warning" style="background-color: #000000; color: #ffffff">This is timetable info and can be not accurate</div>
+    </div>
+    <div id="map" class="map"></div>
+</div>
+<script src="static/js/script_1.1.3.7.js"></script>
+
+<div id="overlay1" class="overlay"></div>
+<div id="infoWindow" class="info-window"></div>
+
+<script>
+    async function shareCurrentPage() {
+        const url = window.location.href;
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: document.title,
+                    text: 'View buses on BusView!',
+                    url: url
+                });
+            } catch (err) {
+                console.log('Share canceled or failed');
+            }
+        } else {
+            navigator.clipboard.writeText(url);
+            alert('Link copied to clipboard!');
+        }
+    }
+
+    document.addEventListener('click', function(event) {
+        const sidebar = document.getElementById("mySidebar");
+        const openbtn = document.querySelector(".openbtnstatic");
+        const isClickInsideSidebar = sidebar.contains(event.target);
+        const isClickOnOpenButton = openbtn.contains(event.target);
+
+        if (sidebar.style.width === "250px" && !isClickInsideSidebar && !isClickOnOpenButton) {
+            closeNav();
+        }
+    });
+</script>
+</body>
+</html>

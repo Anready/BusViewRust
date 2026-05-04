@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Favorite Stops | BusView</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <link id="favicon" rel="icon" href="static/favicon-light.ico" type="image/x-icon">
+    <script>
+        function setFavicon(scheme) {
+            const link = document.getElementById("favicon");
+            link.href = scheme === "dark" ? "favicon-dark.ico" : "favicon-light.ico";
+        }
+
+        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+        setFavicon(mq.matches ? "dark" : "light");
+        mq.addEventListener("change", e => setFavicon(e.matches ? "dark" : "light"));
+    </script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="static/css/styles-bar-1.0.8.css" />
+    <script src="static/js/sidebar.js"></script>
+    <script src="static/js/theme.js"></script>
+    <style>
+        :root {
+            --white: #ffffff;
+            --background-color: #f4f4f4;
+            --text: #333;
+            --text-v2: #666;
+            --stats-background: #f8f9fa;
+        }
+
+        [data-theme="dark"] {
+            --white: #000000;
+            --background-color: #0b0b0b;
+            --text: #cccccc;
+            --text-v2: #999999;
+            --stats-background: #070605;
+        }
+
+        body {
+            background-color: var(--background-color);
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .page-header h1 {
+            color: var(--text);
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .page-header p {
+            color: var(--text-v2);
+            margin: 10px 0 0 0;
+            font-size: 1.1rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-v2);
+        }
+
+        .empty-state .star-icon {
+            font-size: 4rem;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h2 {
+            color: var(--text);
+            margin: 0 0 10px 0;
+            font-size: 1.5rem;
+        }
+
+        .empty-state p {
+            margin: 0 0 20px 0;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .empty-state .btn {
+            background-color: #0078d4;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .empty-state .btn:hover {
+            background-color: #006abc;
+        }
+
+        .stop-item {
+            color: var(--black);
+            border: 1px solid #ddd;
+            margin: 15px 0;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: var(--white);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+
+        .stop-item:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .stop-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .stop-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .stop-star {
+            color: #fbbf24;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .stop-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text);
+            margin: 0;
+        }
+
+        .routes-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .route-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .route-item:last-child {
+            border-bottom: none;
+        }
+
+        .route-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .route-badge {
+            background-color: #0078d4;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .route-name {
+            color: var(--text-v2);
+            font-size: 0.9rem;
+            margin: 1px;
+        }
+
+        .route-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .view-btn {
+            background-color: #0078d4;
+            color: white;
+        }
+
+        .view-btn:hover {
+            background-color: #006abc;
+        }
+
+        .remove-btn {
+            background-color: #d9534f;
+            color: white;
+        }
+
+        .remove-btn:hover {
+            background-color: #c9302c;
+        }
+
+        .clear-all-container {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .clear-all-btn {
+            background-color: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .clear-all-btn:hover {
+            background-color: #5a6268;
+        }
+
+        .stats {
+            background-color: var(--stats-background);
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #0078d4;
+            display: block;
+        }
+
+        .stats-label {
+            color: var(--text-v2);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 768px) {
+            #favoriteStopsContainer {
+                padding: 15px;
+                margin-top: 20px;
+            }
+
+            .stop-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .stop-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .page-header h1 {
+                font-size: 1.5rem;
+            }
+        }
+        #favoriteStopsContainer {
+            margin-top: 40px;
+            padding: 20px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+<body>
+
+<app-sidebar></app-sidebar>
+<button class="openbtn" onclick="openNav()">☰ </button>
+
+<div id="favoriteStopsContainer">
+    <div class="page-header">
+        <h1><i class="fas fa-star" style="color: #fbbf24; margin-right: 10px;"></i>Favorite Stops</h1>
+        <p>Your saved bus stops for quick access</p>
+    </div>
+    <div id="stopsContent">
+        <!-- Favorite stops rendered here -->
+    </div>
+</div>
+
+<script>
+    class FavoriteStops {
+        constructor() {
+            this.favoriteStops = this.getFavorites();
+            this.renderFavorites();
+        }
+
+        getFavorites() {
+            const stored = localStorage.getItem('favoriteStops');
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        saveFavorites() {
+            localStorage.setItem('favoriteStops', JSON.stringify(this.favoriteStops));
+        }
+
+        deleteRoute(fullKey) {
+            this.favoriteStops = this.favoriteStops.filter(fav => fav !== fullKey);
+            this.saveFavorites();
+            this.renderFavorites();
+        }
+
+        clearAllStops() {
+            if (confirm('Remove all favorite stops? This action cannot be undone.')) {
+                this.favoriteStops = [];
+                this.saveFavorites();
+                this.renderFavorites();
+            }
+        }
+
+        goToRoute(routeId, stopName) {
+            window.location.href = `/?stop=${encodeURIComponent(stopName)}&bus=${encodeURIComponent(routeId)}`;
+        }
+
+        renderFavorites() {
+            const content = document.getElementById('stopsContent');
+            if (!this.favoriteStops || this.favoriteStops.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <div class="star-icon"><i class="fas fa-star"></i></div>
+                        <h2>No Favorite Stops Yet</h2>
+                        <p>Start adding stops to your favorites by clicking the star icon<br>when viewing stop information on the map.</p>
+                        <a href="/" class="btn"><i class="fas fa-map-marked-alt" style="margin-right: 8px;"></i>Go to main</a>
+                    </div>`;
+                return;
+            }
+
+            // Группировка: stopName → [{routeId, routeName, fullKey}]
+            const grouped = {};
+            this.favoriteStops.forEach(entry => {
+                const [stopName, routeId, routeName] = entry.split('###');
+                if (!grouped[stopName]) grouped[stopName] = [];
+                grouped[stopName].push({ routeId, routeName, fullKey: entry });
+            });
+
+            const stopNames = Object.keys(grouped);
+            let html = `
+                <div class="stats">
+                    <span class="stats-number">${stopNames.length}</span>
+                    <span class="stats-label">Favorite Stop${stopNames.length !== 1 ? 's' : ''}</span>
+                </div>`;
+
+            stopNames.forEach(stopName => {
+                const routes = grouped[stopName];
+                html += `
+                    <div class="stop-item">
+                        <div class="stop-header">
+                            <div class="stop-info">
+                                <i class="fas fa-star stop-star"></i>
+                                <h3 class="stop-name">${stopName}</h3>
+                            </div>
+                        </div>
+                        <ul class="routes-list">`;
+
+                routes.forEach(route => {
+                    const safeFullKey = route.fullKey.replace(/'/g, "\\'");
+                    html += `
+                        <li class="route-item">
+                            <div class="route-info">
+                                <span class="route-name">${route.routeName}</span>
+                            </div>
+                            <div class="route-actions">
+                                <button class="action-btn view-btn" onclick="favoriteStops.goToRoute('${route.routeId}', '${stopName.replace(/'/g, "\\'")}')">
+                                    <i class="fas fa-eye"></i>View
+                                </button>
+                                <button class="action-btn remove-btn" onclick="favoriteStops.deleteRoute('${safeFullKey}')">
+                                    <i class="fas fa-trash"></i>Remove
+                                </button>
+                            </div>
+                        </li>`;
+                });
+
+                html += `</ul></div>`;
+            });
+
+            if (this.favoriteStops.length > 1) {
+                html += `
+                    <div class="clear-all-container">
+                        <button class="clear-all-btn" onclick="favoriteStops.clearAllStops()">
+                            <i class="fas fa-trash-alt" style="margin-right: 8px;"></i>
+                            Clear All Favorites
+                        </button>
+                    </div>`;
+            }
+
+            content.innerHTML = html;
+        }
+    }
+
+    const favoriteStops = new FavoriteStops();
+</script>
+
+</body>
+</html>

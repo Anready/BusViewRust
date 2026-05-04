@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Tutorials | BusView</title>
+    <link id="favicon" rel="icon" href="static/favicon-light.ico" type="image/x-icon">
+    <script>
+        function setFavicon(scheme) {
+            const link = document.getElementById("favicon");
+            link.href = scheme === "dark" ? "favicon-dark.ico" : "favicon-light.ico";
+        }
+
+        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+        setFavicon(mq.matches ? "dark" : "light");
+        mq.addEventListener("change", e => setFavicon(e.matches ? "dark" : "light"));
+    </script>
+    <meta name="description" content="Learn how to use BusView - comprehensive tutorials for tracking Cyprus public buses and planning your trips.">
+    <meta name="keywords" content="BusView tutorial, Cyprus bus tracking guide, how to use bus tracker, public transport Cyprus">
+    <meta property="og:title" content="BusView | Tutorials">
+    <meta property="og:description" content="Step-by-step guides to master BusView bus tracking platform.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://limassolbus.online">
+    <meta property="og:image" content="https://limassolbus.online/favicon_preview.png">
+    <link rel="stylesheet" href="static/css/tutorials-1.0.2.css">
+    <link rel="stylesheet" href="static/css/styles-bar-1.0.8.css" />
+    <script src="static/js/sidebar.js"></script>
+    <script src="static/js/theme.js"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JVG08NJ1BD"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-JVG08NJ1BD');
+    </script>
+</head>
+<body>
+
+<app-sidebar></app-sidebar>
+<button class="openbtn" onclick="openNav()">☰ </button>
+
+<div class="content">
+    <h1>Tutorials</h1>
+    <p class="intro-text">
+        Master <span class="highlight">BusView</span> with our comprehensive video tutorials and step-by-step guides.
+        Learn everything from basic navigation to advanced trip planning features that will make your public transit experience seamless and efficient.
+    </p>
+
+    <div class="tutorials-grid">
+        <div class="tutorial-card">
+            <div class="video-container">
+                <!-- Replace with actual YouTube embed code -->
+                <iframe class="video-embed"
+                        src="https://www.youtube-nocookie.com/embed/Nk523YQ3ktQ?rel=0&modestbranding=1"
+                        title="Getting Started with BusView"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                </iframe>
+            </div>
+            <div class="card-content">
+                <h3 class="card-title">Getting Started with BusView</h3>
+                <p class="card-description">
+                    Learn the basics of BusView interface, how to navigate the map, find bus stops, and understand real-time bus locations. Perfect for first-time users.
+                </p>
+                <div class="card-links">
+                    <a href="https://www.youtube.com/watch?v=Nk523YQ3ktQ" class="youtube-link" target="_blank">
+                        ▶️ Watch on YouTube
+                    </a>
+                </div>
+            </div>
+        </div>
+
+<!--        <div class="tutorial-card">-->
+<!--            <div class="video-container">-->
+<!--                <iframe class="video-embed"-->
+<!--                        src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1"-->
+<!--                        title="Getting Started with BusView"-->
+<!--                        frameborder="0"-->
+<!--                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"-->
+<!--                        allowfullscreen>-->
+<!--                </iframe>-->
+<!--            </div>-->
+<!--            <div class="card-content">-->
+<!--                <h3 class="card-title">Advanced Trip Planning</h3>-->
+<!--                <p class="card-description">-->
+<!--                    Master the trip planning feature to find the best routes, compare different options, and save your favorite journeys for quick access.-->
+<!--                </p>-->
+<!--                <div class="card-links">-->
+<!--                    <a href="https://youtube.com/watch?v=example2" class="youtube-link" target="_blank">-->
+<!--                        ▶️ Watch on YouTube-->
+<!--                    </a>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+
+<!--        <div class="tutorial-card">-->
+<!--            <div class="video-container">-->
+<!--                <iframe class="video-embed"-->
+<!--                        src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1"-->
+<!--                        title="Getting Started with BusView"-->
+<!--                        frameborder="0"-->
+<!--                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"-->
+<!--                        allowfullscreen>-->
+<!--                </iframe>-->
+<!--            </div>-->
+<!--            <div class="card-content">-->
+<!--                <h3 class="card-title">Understanding Real-time vs Emulated Data</h3>-->
+<!--                <p class="card-description">-->
+<!--                    Learn the difference between real-time bus tracking and emulated schedules, and how to make the most of both features across different cities.-->
+<!--                </p>-->
+<!--                <div class="card-links">-->
+<!--                    <a href="https://youtube.com/watch?v=example3" class="youtube-link" target="_blank">-->
+<!--                        ▶️ Watch on YouTube-->
+<!--                    </a>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
+    </div>
+
+    <div class="quick-tips">
+        <h2>Quick Tips & Tricks</h2>
+        <div class="tips-grid">
+            <div class="tip-item">
+                <div class="tip-title">💡 Pro Tip</div>
+                <div class="tip-text">Save frequently used routes in "Saved Trips" for instant access without re-entering destinations.</div>
+            </div>
+            <div class="tip-item">
+                <div class="tip-title">⏰ Timing</div>
+                <div class="tip-text">Check emulated vs real-time status - emulated shows scheduled times, not actual bus positions.</div>
+            </div>
+            <div class="tip-item">
+                <div class="tip-title">🗺️ Navigation</div>
+                <div class="tip-text">Use the "Stops Map" to explore all available bus stops and plan alternative routes.</div>
+            </div>
+            <div class="tip-item">
+                <div class="tip-title">📱 Mobile</div>
+                <div class="tip-text">Add BusView to your home screen for app-like experience on mobile devices.</div>
+            </div>
+            <div class="tip-item">
+                <div class="tip-title">🚌 Updates</div>
+                <div class="tip-text">Real-time data updates every 10 seconds for the most accurate bus locations.</div>
+            </div>
+            <div class="tip-item">
+                <div class="tip-title">🎯 Accuracy</div>
+                <div class="tip-text">Paphos buses currently show real-time tracking only - scheduled times coming soon!</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <h1>FAQ</h1>
+    <p class="intro-text">Got questions about <span class="highlight">BusView</span>? We've got answers! Browse our frequently asked questions below to learn more about how to use our platform and make the most of your public transit experience.</p>
+
+    <div class="faq-container">
+        <div class="faq-item">
+            <h3>What is BusView?</h3>
+            <p>BusView is a platform designed to simplify public transportation by offering real-time bus stop information, trip planning, and an interactive map to help you navigate with ease.</p>
+        </div>
+        <div class="faq-item">
+            <h3>Is emulated works for all buses?</h3>
+            <p>For all except Paphos buses. In future Paphos buees will be added.</p>
+        </div>
+        <div class="faq-item">
+            <h3>Why I can't use 'info' button for Paphos buses?</h3>
+            <p>As with emulation, this function not work only for Paphos buses, in future it will be added.</p>
+        </div>
+        <div class="faq-item">
+            <h3>Is emulation is accurate?</h3>
+            <p>No, it's just a function which will show you, where buses must be based on official schedule. ITS NOT REAL BUS LOCATION</p>
+        </div>
+        <div class="faq-item">
+            <h3>What is 'TT Bus'?</h3>
+            <p>TT Bus - TimeTable Bus. This is bus which must arrive to this stop at specified time, which is taken from the timetable. It is showing when no real bus before this stop</p>
+        </div>
+        <div class="faq-item">
+            <h3>How do I plan a trip?</h3>
+            <p>Navigate to the <a href="/planTrip"><span class="highlight">Plan Trip</span></a> section, enter your starting point and destination, and BusView will provide you with the best routes and schedules based on real-time data.</p>
+        </div>
+        <div class="faq-item">
+            <h3>Can I save my trips?</h3>
+            <p>Yes! In the <a href="/savedTrips"><span class="highlight">Saved Trips</span></a> section, you can store your frequently used routes for quick access anytime.</p>
+        </div>
+        <div class="faq-item">
+            <h3>Is BusView available on mobile devices?</h3>
+            <p>BusView is fully responsive and works seamlessly on both desktop and mobile devices. We're also working on dedicated mobile apps for iOS and Android!</p>
+        </div>
+        <div class="faq-item">
+            <h3>How accurate is the real-time information?</h3>
+            <p>We source our data from government and update it in real-time to ensure accuracy. However, delays (+-10 seconds) may occur due to unforeseen circumstances.</p>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <p class="intro-text">© 2025 BusView. All rights reserved.</p>
+</footer>
+
+<script>
+    // Lazy loading for video embeds
+    document.addEventListener('DOMContentLoaded', function() {
+        const videoContainers = document.querySelectorAll('.video-placeholder');
+        videoContainers.forEach(container => {
+            container.addEventListener('click', function() {
+                // This could be expanded to dynamically load video embeds
+                console.log('Video placeholder clicked');
+            });
+        });
+    });
+
+    document.querySelectorAll('.faq-item h3').forEach(item => {
+        item.addEventListener('click', () => {
+            const faqItem = item.parentElement;
+            faqItem.classList.toggle('active');
+        });
+    });
+</script>
+</body>
+</html>

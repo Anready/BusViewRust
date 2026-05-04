@@ -1,0 +1,618 @@
+:root {
+    --white: #ffffff;
+    --background-color: #f4f4f4;
+    --location-input-background: #f9f9f9;
+    --location-input-hover: #f0f0f0;
+    --text: #333;
+    --border-map-search: #ccc;
+    --selected-location-text: #666;
+    --walk-special-background: #f8f9fa;
+    --trip-details-border: #eee;
+}
+
+[data-theme="dark"] {
+    --white: #000000;
+    --background-color: #0b0b0b;
+    --location-input-background: #060606;
+    --location-input-hover: #0f0f0f;
+    --text: #cccccc;
+    --border-map-search: #333;
+    --selected-location-text: #999999;
+    --walk-special-background: #070605;
+    --trip-details-border: #111111;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: var(--background-color);
+    color: var(--text);
+}
+#controls {
+    position: relative;
+    left: 50%;
+    top: 70px;
+    transform: translateX(-50%);
+    z-index: 900;
+    background: var(--white);
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    width: 80%;
+    max-width: 500px;
+}
+#map-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    display: none;
+    z-index: 1000;
+    background-color: var(--white);
+}
+#map {
+    height: 100%;
+    width: 100%;
+    z-index: 1001;
+    background-color: #ffffff;
+}
+#result { margin-top: 10px; }
+.input-field {
+    position: relative;
+    margin: 15px 0;
+}
+.location-input {
+    color: var(--black);
+    padding: 10px;
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    background-color: var(--location-input-background);
+    cursor: pointer;
+    user-select: none;
+}
+.location-input:hover {
+    background-color: var(--location-input-hover);
+}
+.location-input:focus {
+    outline: none;
+    border-color: #0078d4;
+}
+#findRouteBtn {
+    background-color: #0078d4;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    width: 100%;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-top: 10px;
+}
+#findRouteBtn:hover {
+    background-color: #005a9e;
+}
+#confirmLocationBtn {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1001;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+#confirmLocationBtn:hover {
+    background-color: #218838;
+}
+.closeMapBtn,
+#closeMapBtn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 1002;
+    background-color: var(--white);
+    border: 2px solid #0078d4;
+    color: #0078d4;
+    padding: 8px 16px;
+    border-radius: 50px;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+#tripContainer {
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 80px 20px 20px 20px;
+}
+.trip-option {
+    background-color: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    padding: 20px;
+}
+.trip-option h2 {
+    color: #0078d4;
+    margin-top: 0;
+    font-size: 1.8em;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+.trip-details p {
+    font-size: 1.2em;
+    margin: 10px 0;
+}
+.trip-details ul {
+    list-style: none;
+    padding: 0;
+}
+.trip-details li {
+    padding: 15px;
+    border-bottom: 1px solid var(--trip-details-border);
+}
+.trip-details li:last-child {
+    border-bottom: none;
+}
+.walk span {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+    color: #28a745;
+}
+.bus span {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+.route-1 span { color: #0078d4; }
+.route-2 span { color: #ff5733; }
+.route-3 span { color: #ff33ff; }
+.route-4 span { color: #ffcc00; }
+.trip-details li p {
+    margin: 5px 0;
+    font-size: 1em;
+}
+.map-container {
+    height: 300px;
+    margin-top: 15px;
+    border-radius: 5px;
+    overflow: hidden;
+}
+.selected-location {
+    font-size: 12px;
+    color: var(--selected-location-text);
+    margin-top: 5px;
+}
+.error {
+    color: #f44336;
+    font-weight: bold;
+    margin: 10px 0;
+}
+footer {
+    text-align: center;
+    padding: 20px;
+    background-color: #333;
+    color: white;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
+
+.show-route-btn {
+    background-color: #0078d4;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-top: 10px;
+    display: inline-block;
+}
+.show-route-btn:hover {
+    background-color: #005a9e;
+}
+
+#route-map-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    display: none;
+    z-index: 1000;
+    background-color: rgba(255, 255, 255, 0.95);
+}
+#route-map {
+    height: 100%;
+    width: 100%;
+    z-index: 1001;
+}
+
+.date-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.date-input {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    user-select: none;
+}
+
+.date-input::-webkit-calendar-picker-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* Новые стили для времени */
+.time-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.time-input {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    user-select: none;
+}
+
+.time-input::-webkit-calendar-picker-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.user-location-dot {
+    position: relative;
+}
+
+.user-location-dot:after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    background-color: rgba(66, 133, 244, 0.4);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: pulse 2s infinite;
+}
+
+.save-trip-btn {
+    margin: 5px;
+    padding: 8px 15px;
+    cursor: pointer;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
+.save-trip-btn:hover {
+    background-color: #218838;
+}
+/* Container for the swap button and input fields */
+.trip-input-container {
+    display: flex;
+    align-items: flex-start; /* Align items to the top */
+    gap: 10px; /* Space between button and inputs */
+    margin-bottom: 15px; /* Space below the container */
+}
+
+/* Wrapper for the input fields */
+.input-wrapper {
+    flex: 1; /* Take up remaining space */
+}
+
+/* Styling for the Swap Button */
+.swap-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px; /* Compact width for a square button */
+    height: 40px; /* Square shape */
+    padding: 0; /* Remove padding for compactness */
+    background-color: #0078d4; /* Match the blue theme */
+    transform: rotate(90deg);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 18px; /* Larger icon */
+    cursor: pointer;
+    transition: all 0.3s ease; /* Smooth transitions */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    margin-top: 40px;
+}
+
+/* Icon styling */
+.swap-icon {
+    font-size: 20px; /* Larger icon for visibility */
+    transition: transform 0.3s ease; /* Animation for the icon */
+}
+
+/* Hide the text, keep icon only (for compactness) */
+.swap-btn span:not(.swap-icon) {
+    display: none; /* Hide "Swap Stops" text */
+}
+
+/* Hover effect */
+.swap-btn:hover {
+    background-color: #005ea2; /* Darker blue on hover */
+    transform: translateY(-2px); /* Slight lift */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* Enhanced shadow */
+}
+
+/* Active effect (when clicked) */
+.swap-btn:active {
+    transform: translateY(0); /* Reset lift */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Normal shadow */
+}
+
+/* Rotate the icon on hover */
+.swap-btn:hover .swap-icon {
+    transform: rotate(270deg);
+}
+
+/* Ensure input fields stack properly */
+.input-field {
+    margin-bottom: 10px; /* Consistent spacing between inputs */
+}
+/* Search Control Styles */
+.search-control {
+    background: var(--white);
+    padding: 8px;
+    border-radius: 12px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    margin: 10px;
+}
+
+/* Special styling for the centered search control */
+.centered-search {
+    position: absolute !important; /* Override Leaflet's positioning */
+    z-index: 1000;
+}
+
+.search-container {
+    display: flex;
+    width: 280px;
+}
+
+#street-search {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border-map-search);
+    border-radius: 4px 0 0 4px;
+    font-size: 14px;
+    outline: none;
+    background-color: var(--white);
+    color: var(--black);
+}
+
+#street-search:focus {
+    border-color: #0078d4;
+    box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
+}
+
+#street-search.loading {
+    background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MCA1MCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48cGF0aCBmaWxsPSIjMDA3OGQ0IiBkPSJNNDMuOTM1IDI1LjE0NWMwLTEwLjMxOC04LjM2NC0xOC42ODMtMTguNjgzLTE4LjY4My0xMC4zMTggMC0xOC42ODMgOC4zNjUtMTguNjgzIDE4LjY4MyBoNC4wNjhjMC04LjAyMiA2LjU5My0xNC42MTUgMTQuNjE1LTE0LjYxNSA4LjAyMiAwIDE0LjYxNSA2LjU5MyAxNC42MTUgMTQuNjE1eiI+PGFuaW1hdGVUcmFuc2Zvcm0gYXR0cmlidXRlVHlwZT0ieG1sIiBhdHRyaWJ1dGVOYW1lPSJ0cmFuc2Zvcm0iIHR5cGU9InJvdGF0ZSIgZnJvbT0iMCAyNSAyNSIgdG89IjM2MCAyNSAyNSIgZHVyPSIwLjhzIiByZXBlYXRDb3VudD0iaW5kZWZpbml0ZSIvPjwvcGF0aD48L3N2Zz4=');
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 20px;
+}
+
+#search-btn {
+    padding: 8px 12px;
+    background-color: #0078d4;
+    color: white;
+    border: 1px solid #0078d4;
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+#search-btn:hover {
+    background-color: #005a9e;
+}
+
+/* Style for the search result pin */
+.search-pin {
+    width: 20px;
+    height: 20px;
+    background-color: #ff4757;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    margin: 10px 0 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    animation: bounce 0.5s ease-out;
+}
+
+.search-pin::after {
+    content: '';
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+}
+
+@keyframes bounce {
+    0% { transform: translateY(-30px) rotate(-45deg); opacity: 0; }
+    60% { transform: translateY(5px) rotate(-45deg); opacity: 1; }
+    100% { transform: translateY(0) rotate(-45deg); opacity: 1; }
+}
+
+/* Ensure the search control doesn't overlap with close button */
+#closeMapBtn {
+    z-index: 1100; /* Higher z-index than the search control */
+}
+
+.leaflet-control-zoom {
+    position: absolute;
+    top: 50px;
+    z-index: 1000;
+}
+
+/* Green pin for search results */
+.search-green-pin {
+    width: 20px;
+    height: 20px;
+    background-color: #28a745; /* Green color */
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    margin: 10px 0 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    animation: bounce 0.5s ease-out;
+}
+
+.search-green-pin::after {
+    content: '';
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+}
+
+/* Status message styling */
+.search-status {
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    margin-top: 8px;
+    font-size: 12px;
+    text-align: center;
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Search result popup styling */
+.search-result-popup {
+    font-size: 14px;
+    max-width: 250px;
+}
+
+.search-result-popup strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #28a745;
+}
+
+.search-result-popup p {
+    margin: 0;
+    font-size: 12px;
+    color: #666;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+
+
+.user-location-dot {
+    box-shadow: 0 0 0 4px rgba(66, 133, 244, 0.4);
+    animation: pulse 2s infinite;
+}
+
+.search-green-pin {
+    background-color: #28a745;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(66, 133, 244, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(66, 133, 244, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(66, 133, 244, 0);
+    }
+}
+
+.nearest-stop {
+    animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+.bus-stop-marker {
+    opacity: 0.7;
+}
+
+.walk.special {
+    background-color: var(--walk-special-background);
+    border-left: 4px solid #28a745;
+}
+
+#confirmLocationBtn {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#confirmLocationBtn:hover {
+    background-color: #218838;
+}
+
+.search-status {
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 5px 10px;
+    border-radius: 4px;
+    margin-top: 5px;
+    font-size: 12px;
+    text-align: center;
+}
+
+.selected-point-start, .selected-point-end {
+    animation: pulse 2s infinite;
+}

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Saved Trips | BusView</title>
+    <link id="favicon" rel="icon" href="static/favicon-light.ico" type="image/x-icon">
+    <script>
+        function setFavicon(scheme) {
+            const link = document.getElementById("favicon");
+            link.href = scheme === "dark" ? "favicon-dark.ico" : "favicon-light.ico";
+        }
+
+        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+        setFavicon(mq.matches ? "dark" : "light");
+        mq.addEventListener("change", e => setFavicon(e.matches ? "dark" : "light"));
+    </script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.79.0/dist/L.Control.Locate.min.css" />
+    <link rel="stylesheet" href="static/css/styles-bar-1.0.8.css" />
+    <script src="static/js/sidebar.js"></script>
+    <link rel="stylesheet" href="static/css/trips-1.0.4.css"/>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JVG08NJ1BD"></script>
+    <script src="static/js/theme.js"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-JVG08NJ1BD');
+    </script>
+    <style>
+        #savedTripsContainer {
+            margin-top: 40px;
+            padding: 20px;
+        }
+        .trip-option {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .trip-details ul { list-style: none; padding: 0; }
+        .trip-details li { margin: 10px 0; padding: 10px; }
+        .route-map-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            display: none;
+            z-index: 1000;
+            background-color: #ffffff;
+        }
+        #route-map {
+            height: 100%;
+            width: 100%;
+            z-index: 1001;
+            background-color: #ffffff;
+        }
+        #closeRouteMapBtn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 1002;
+            background-color: white;
+            border: 2px solid #0078d4;
+            color: #0078d4;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: bold;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+        #closeRouteMapBtn:hover {
+            background-color: #0078d4;
+            color: white;
+        }
+        #closeRouteMapBtn:before {
+            content: '×';
+            font-size: 20px;
+            margin-right: 5px;
+        }
+        .show-route-btn, .delete-trip-btn {
+            margin: 5px;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            border: none;
+            color: white;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .show-route-btn {
+            background-color: #0078d4;
+        }
+        .show-route-btn:hover {
+            background-color: #006abc;
+        }
+        .delete-trip-btn {
+            background-color: #d9534f;
+        }
+        .delete-trip-btn:hover {
+            background-color: #c9302c;
+        }
+
+        /* User location marker styles */
+        .user-location-marker {
+            position: relative;
+            width: 24px;
+            height: 24px;
+        }
+        .user-location-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            background-color: #0078d4;
+            border: 2px solid white;
+            border-radius: 50%;
+            z-index: 1002;
+        }
+        .user-location-pulse {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            height: 24px;
+            background-color: rgba(0, 120, 212, 0.3);
+            border-radius: 50%;
+            z-index: 1001;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(2);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<app-sidebar></app-sidebar>
+<button class="openbtn" onclick="openNav()">☰ </button>
+
+<div id="savedTripsContainer"></div>
+<div id="route-map-container" class="route-map-container">
+    <div id="route-map"></div>
+    <button id="closeRouteMapBtn">Close Map</button>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.79.0/dist/L.Control.Locate.min.js"></script>
+<script src="static/js/savedTrips_1.0.6.js"></script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Trip Planner | BusView</title>
+    <!-- Leaflet CSS -->
+    <link id="favicon" rel="icon" href="static/favicon-light.ico" type="image/x-icon">
+    <script>
+        function setFavicon(scheme) {
+            const link = document.getElementById("favicon");
+            link.href = scheme === "dark" ? "favicon-dark.ico" : "favicon-light.ico";
+        }
+
+        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+        setFavicon(mq.matches ? "dark" : "light");
+        mq.addEventListener("change", e => setFavicon(e.matches ? "dark" : "light"));
+    </script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <link rel="stylesheet" href="static/css/trips-1.0.4.css"/>
+
+    <meta name="description" content="Track Cyprus public buses in real time on an interactive map. Plan trips, find bus stops, and get accurate live updates.">
+    <meta name="keywords" content="Limassol buses, bus tracker, Cyprus public transport, live bus map, plan trip, Paphos, Nicosia, Larnaca, Cyprus">
+    <meta property="og:title" content="BusView | Plan Trip">
+    <meta property="og:description" content="Track Cyprus buses live on a map. Plan trips and see routes in real time.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://limassolbus.online">
+    <meta property="og:image" content="https://limassolbus.online/favicon_preview.png">
+    <link rel="stylesheet" href="static/css/styles-bar-1.0.8.css" />
+    <script src="static/js/sidebar.js"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JVG08NJ1BD"></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
+    <script src="static/js/theme.js"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-JVG08NJ1BD');
+    </script>
+</head>
+<body>
+<div id="turnstile-hidden" style="display: none;"></div>
+
+<app-sidebar></app-sidebar>
+<button class="openbtn" onclick="openNav()">☰ </button>
+
+<div id="controls">
+    <h2 style="margin-top: 0; color: #0078d4;">Trip Planner</h2>
+
+    <div class="trip-input-container">
+        <!-- Swap Button on the Left -->
+        <div class="input-wrapper">
+            <div class="input-field">
+                <input type="text" id="start" class="location-input" placeholder="Click to select starting point" onclick="showMap('start');" readonly>
+                <input type="hidden" id="startId" value="">
+                <div id="startLocationInfo" class="selected-location"></div>
+            </div>
+
+            <div class="input-field">
+                <input type="text" id="end" class="location-input" placeholder="Click to select destination" readonly>
+                <input type="hidden" id="endId" value="">
+                <div id="endLocationInfo" class="selected-location"></div>
+            </div>
+        </div>
+        <button id="swapBtn" class="swap-btn" onclick="swapStops()" title="Swap start and end stops">
+            <span class="swap-icon">⇆</span>
+        </button>
+    </div>
+
+    <div class="input-field">
+        <label for="tripDate" style="display: block; margin-bottom: 5px; font-weight: bold;">Departure Date:</label>
+        <div class="date-wrapper">
+            <input type="date" id="tripDate" class="location-input date-input" min="<?php echo date('Y-m-d'); ?>">
+        </div>
+    </div>
+
+    <div class="input-field">
+        <label for="tripTime" style="display: block; margin-bottom: 5px; font-weight: bold;">Departure Time:</label>
+        <div class="time-wrapper">
+            <input type="time" id="tripTime" class="location-input time-input">
+        </div>
+    </div>
+
+    <button id="findRouteBtn" onclick="findRoute()">Find Route</button>
+    <div id="result"></div>
+</div>
+
+<div id="map-container">
+    <div id="map"></div>
+    <button id="closeMapBtn">✕</button>
+    <button id="confirmLocationBtn">Confirm Selection</button>
+</div>
+
+<div id="route-map-container">
+    <div id="route-map"></div>
+    <button id="closeRouteMapBtn" class="closeMapBtn">✕</button>
+
+</div>
+
+<main id="tripContainer"></main>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="static/js/planTrip_1.0.8.js"></script>
+
+<script>
+    document.getElementById('tripDate').min = new Date().toISOString().split('T')[0];
+    document.getElementById('tripTime').value = new Date().toTimeString().slice(0,5);
+
+    const dateInput = document.getElementById('tripDate');
+    const dateWrapper = dateInput.parentElement;
+
+    dateInput.value = (new Date()).toISOString().split("T")[0];
+
+    dateWrapper.addEventListener('click', (e) => {
+        e.preventDefault();
+        try {
+            dateInput.showPicker();
+        } catch (error) {
+            dateInput.focus();
+        }
+    });
+
+    const timeInput = document.getElementById('tripTime');
+    const timeWrapper = timeInput.parentElement;
+
+    timeWrapper.addEventListener('click', (e) => {
+        e.preventDefault();
+        try {
+            timeInput.showPicker();
+        } catch (error) {
+            timeInput.focus();
+        }
+    });
+
+    function swapStops() {
+        const startInput = document.getElementById('start');
+        const endInput = document.getElementById('end');
+        const startIdInput = document.getElementById('startId');
+        const endIdInput = document.getElementById('endId');
+        const startLocationInfo = document.getElementById('startLocationInfo');
+        const endLocationInfo = document.getElementById('endLocationInfo');
+
+        const tempText = startInput.value;
+        const tempId = startIdInput.value;
+        const tempInfo = startLocationInfo.innerHTML;
+        const tempLat = startInput.dataset.selectedLat;
+        const tempLng = startInput.dataset.selectedLng;
+
+        startInput.value = endInput.value;
+        startIdInput.value = endIdInput.value;
+        startLocationInfo.innerHTML = endLocationInfo.innerHTML;
+        startInput.dataset.selectedLat = endInput.dataset.selectedLat;
+        startInput.dataset.selectedLng = endInput.dataset.selectedLng;
+
+        endInput.value = tempText;
+        endIdInput.value = tempId;
+        endLocationInfo.innerHTML = tempInfo;
+        endInput.dataset.selectedLat = tempLat;
+        endInput.dataset.selectedLng = tempLng;
+
+        saveFieldState();
+    }
+</script>
+</body>
+</html>

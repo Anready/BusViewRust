@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Stops Map | BusView</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+    <link rel="stylesheet" href="static/css/styles-bar-1.0.8.css" />
+    <link id="favicon" rel="icon" href="static/favicon-light.ico" type="image/x-icon">
+    <script>
+        function setFavicon(scheme) {
+            const link = document.getElementById("favicon");
+            link.href = scheme === "dark" ? "favicon-dark.ico" : "favicon-light.ico";
+        }
+
+        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+        setFavicon(mq.matches ? "dark" : "light");
+        mq.addEventListener("change", e => setFavicon(e.matches ? "dark" : "light"));
+    </script>
+    <script src="static/js/sidebar.js"></script>
+
+    <meta name="description" content="Track Cyprus public buses in real time on an interactive map. Plan trips, find bus stops, and get accurate live updates.">
+    <meta name="keywords" content="Limassol buses, bus tracker, Cyprus public transport, live bus map, plan trip, Paphos, Nicosia, Larnaca, Cyprus">
+    <meta property="og:title" content="BusView | Stops Map">
+    <meta property="og:description" content="Track Cyprus buses live on a map. Plan trips and see routes in real time.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://limassolbus.online">
+    <meta property="og:image" content="https://limassolbus.online/favicon_preview.png">
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JVG08NJ1BD"></script>
+    <script src="static/js/theme.js"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-JVG08NJ1BD');
+    </script>
+    <style>
+        :root {
+            --white: #ffffff;
+            --black: #000000;
+            --location-button-hover: #f5f5f5;
+            --text: #333;
+            --bottom-border: #f0f0f0;
+        }
+
+        [data-theme="dark"] {
+            --white: #000000;
+            --black: #ffffff;
+            --location-button-hover: #0a0a0a;
+            --text: #cccccc;
+            --bottom-border: #0f0f0f;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #map {
+            height: 100vh;
+            width: 100vw;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            background-color: #ffffff;
+        }
+
+        .leaflet-control-zoom {
+            top: 50px;
+            left: 5px;
+        }
+
+        /* My Location Button Styles */
+        .location-button {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            color: var(--black);
+            background-color: var(--white);
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            padding: 10px 25px;
+            font-family: 'Arial', sans-serif;
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .location-button:hover {
+            background-color: var(--location-button-hover);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .location-button:before {
+            content: '';
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234285F4'%3E%3Cpath d='M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+
+        .user-location-dot {
+            position: relative;
+        }
+
+        .user-location-dot:after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            background-color: rgba(66, 133, 244, 0.4);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse 2s infinite;
+        }
+
+        /* Bottom Fragment Styles */
+        .bottom-fragment {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            color: var(--black);
+            background-color: var(--white);
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            max-height: 65vh;
+            overflow: hidden;
+            z-index: 1598;
+        }
+
+        .bottom-fragment.show {
+            transform: translateY(0);
+        }
+
+        .bottom-fragment-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .bottom-fragment-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .bottom-fragment-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+
+
+        .bus-list {
+            max-height: calc(65vh - 120px);
+            overflow-y: auto;
+        }
+
+        .bus-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--bottom-border);
+            display: flex;
+            cursor: pointer;
+            align-items: center;
+        }
+
+        .bus-number {
+            background-color: #4285F4;
+            color: white;
+            border-radius: 4px;
+            padding: 5px 10px;
+            margin-right: 15px;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .bus-direction {
+            flex-grow: 1;
+            color: var(--text);
+        }
+
+        .pull-indicator {
+            width: 40px;
+            height: 5px;
+            background-color: #ddd;
+            border-radius: 10px;
+            margin: 10px auto;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        .leaflet-control-zoom-in {
+            background-color: var(--white) !important;
+            color: var(--black) !important;
+        }
+
+        .leaflet-control-zoom-out {
+            background-color: var(--white) !important;
+            color: var(--black) !important;
+        }
+    </style>
+</head>
+<body>
+
+<app-sidebar></app-sidebar>
+<button class="openbtn" onclick="openNav()">☰ </button>
+
+<div id="map"></div>
+<button id="myLocationButton" class="location-button">My Location</button>
+
+<!-- Bottom Fragment -->
+<div id="bottomFragment" class="bottom-fragment">
+    <div class="pull-indicator"></div>
+    <div class="bottom-fragment-header">
+        <h2 id="stopTitle" class="bottom-fragment-title">Stop Name</h2>
+        <button class="bottom-fragment-close" onclick="hideBottomFragment()">×</button>
+    </div>
+    <div class="bottom-fragment-content">
+        <ul id="busList" class="bus-list">
+            <!-- Bus items will be dynamically added here -->
+        </ul>
+    </div>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet MarkerCluster JS -->
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="static/js/bus_stops.js"></script>
+<script>
+    const map = L.map('map').setView([34.75, 33.25], 9);
+    const bottom = document.getElementById('bottomFragment');
+    let userLocationMarker = null;
+    let userPosition = null;
+    let currentStopId = null;
+    let stopBusesData = null;
+
+    if (getTheme() === 'light') {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    } else {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(map);
+    }
+
+    const markers = L.markerClusterGroup();
+    try {
+        stopsData.forEach((stop, id) => {
+            const marker = L.marker([stop.latitude, stop.longitude]);
+
+            marker.on('click', function() {
+                showStopInfo(id, stop.description);
+            });
+
+            markers.addLayer(marker);
+        });
+
+        map.addLayer(markers);
+        if (stopsData.length > 0) {
+            const bounds = stopsData.map(stop => [stop.latitude, stop.longitude]);
+            map.fitBounds(bounds);
+        }
+    } catch (error) {
+        console.error('Error processing stops:', error);
+        alert('Failed to process stops data.');
+    }
+
+    fetch('https://raw.githubusercontent.com/Anready/BusRoutes/refs/heads/main/busRouteStops.json')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(stops => {
+            stopBusesData = stops;
+        })
+        .catch(error => {
+            console.error('Error loading stops:', error);
+            alert('Failed to load stops data.');
+        });
+
+    function showStopInfo(stopId, stopName) {
+        currentStopId = stopId;
+
+        document.getElementById('stopTitle').textContent = stopName;
+        const busList = document.getElementById('busList');
+        busList.innerHTML = '';
+
+        if (stopBusesData[stopId]) {
+            stopBusesData[stopId].sort((a, b) => {
+                const routeA = a.direction.split(": ")[0].trim();
+                const routeB = b.direction.split(": ")[0].trim();
+
+                const [, letterA = "", numberA = ""] = routeA.match(/([^\d]*)(\d+)/) || [];
+                const [, letterB = "", numberB = ""] = routeB.match(/([^\d]*)(\d+)/) || [];
+
+                if (letterA !== letterB) {
+                    return letterA.localeCompare(letterB);
+                }
+
+                return parseInt(numberA, 10) - parseInt(numberB, 10);
+            });
+
+            stopBusesData[stopId].forEach(bus => {
+                const busItem = document.createElement('li');
+                busItem.className = 'bus-item';
+
+                const busNumber = bus.direction.split(": ")[0];
+                const busDirection = bus.direction.split(": ")[1];
+
+                busItem.innerHTML = `
+            <span class="bus-number">${busNumber}</span>
+            <span class="bus-direction">${busDirection}</span>
+        `;
+                busItem.addEventListener('click', () => {
+                    window.location.href = `/?bus=${encodeURIComponent(bus.number)}&stop=${encodeURIComponent(stopName)}`;
+                });
+
+                busList.appendChild(busItem);
+            });
+        } else {
+            const noDataItem = document.createElement('li');
+            noDataItem.className = 'bus-item';
+            noDataItem.innerHTML = `
+        <span class="bus-direction">No bus data available for this stop</span>
+    `;
+            busList.appendChild(noDataItem);
+        }
+
+        bottom.classList.add('show');
+    }
+
+    function hideBottomFragment() {
+        bottom.classList.remove('show');
+        bottom.removeAttribute("style");
+    }
+
+    function getUserLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    userPosition = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+
+                    if (userLocationMarker) {
+                        map.removeLayer(userLocationMarker);
+                    }
+
+                    userLocationMarker = L.marker([userPosition.lat, userPosition.lng], {
+                        icon: L.divIcon({
+                            className: 'user-location',
+                            html: '<div class="user-location-dot" style="background-color: #4285F4; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>',
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        })
+                    })
+                        .addTo(map)
+                        .bindPopup("Your Location");
+
+                    map.flyTo([userPosition.lat, userPosition.lng], 16, {
+                        duration: 1.5,
+                        easeLinearity: 0.25
+                    });
+                },
+                (error) => {
+                    console.error("Error getting location:", error);
+                    showNotification("Unable to access your location", "error");
+                }
+            );
+        } else {
+            showNotification("Geolocation is not supported by your browser", "error");
+        }
+    }
+
+    function showNotification(message, type = "info") {
+        const notificationEl = document.createElement('div');
+        const bgColor = type === "error" ? "#f44336" : "#4285F4";
+
+        notificationEl.style.cssText = `
+            position: fixed;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: ${bgColor};
+            font-family: 'Arial', sans-serif;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 2000;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        `;
+        notificationEl.textContent = message;
+        document.body.appendChild(notificationEl);
+
+        setTimeout(() => {
+            notificationEl.style.opacity = "0";
+            notificationEl.style.transition = "opacity 0.5s";
+            setTimeout(() => {
+                document.body.removeChild(notificationEl);
+            }, 500);
+        }, 3000);
+    }
+
+    getUserLocation();
+
+    function centerOnLocation() {
+        if (userPosition) {
+            map.flyTo([userPosition.lat, userPosition.lng], 16, {
+                duration: 1.5,
+                easeLinearity: 0.25
+            });
+        } else {
+            getUserLocation();
+        }
+    }
+
+    document.getElementById('myLocationButton').addEventListener('click', centerOnLocation);
+
+    const bottomFragment = document.getElementById('bottomFragment');
+    let startY = 0;
+    let startTranslate = 0;
+    let isDragging = false;
+
+    bottomFragment.addEventListener('touchstart', function(e) {
+        const touchY = e.touches[0].clientY;
+        startY = touchY;
+        startTranslate = getCurrentTranslate();
+        isDragging = true;
+
+        bottomFragment.style.transition = 'none';
+    });
+
+    bottomFragment.addEventListener('touchmove', function(e) {
+        if (!isDragging) return;
+
+        const touchY = e.touches[0].clientY;
+        const diff = touchY - startY;
+
+        if (diff > 0) {
+            bottomFragment.style.transform = `translateY(${diff}px)`;
+        }
+    });
+
+    bottomFragment.addEventListener('touchend', function() {
+        if (!isDragging) return;
+
+        bottomFragment.style.transition = 'transform 0.3s ease-out';
+
+        const currentTranslate = getCurrentTranslate();
+
+        if (currentTranslate > bottomFragment.offsetHeight * 0.3) {
+            hideBottomFragment();
+        } else {
+            bottomFragment.style.transform = 'translateY(0)';
+        }
+
+        isDragging = false;
+    });
+
+    function getCurrentTranslate() {
+        const style = window.getComputedStyle(bottomFragment);
+        const matrix = new WebKitCSSMatrix(style.transform);
+        return matrix.m42;
+    }
+</script>
+</body>
+</html>

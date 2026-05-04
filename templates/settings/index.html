@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>About | BusView</title>
+    <link id="favicon" rel="icon" href="static/favicon-light.ico" type="image/x-icon">
+    <script>
+        function setFavicon(scheme) {
+            const link = document.getElementById("favicon");
+            link.href = scheme === "dark" ? "favicon-dark.ico" : "favicon-light.ico";
+        }
+
+        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+        setFavicon(mq.matches ? "dark" : "light");
+        mq.addEventListener("change", e => setFavicon(e.matches ? "dark" : "light"));
+    </script>
+    <meta name="description" content="Track Cyprus public buses in real time on an interactive map. Plan trips, find bus stops, and get accurate live updates.">
+    <meta name="keywords" content="Limassol buses, bus tracker, Cyprus public transport, live bus map, plan trip, Paphos, Nicosia, Larnaca, Cyprus">
+    <meta property="og:title" content="BusView | About">
+    <meta property="og:description" content="Track Cyprus buses live on a map. Plan trips and see routes in real time.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://limassolbus.online">
+    <meta property="og:image" content="https://limassolbus.online/favicon_preview.png">
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JVG08NJ1BD"></script>
+    <link rel="stylesheet" href="static/css/styles-bar-1.0.8.css" />
+    <script src="static/js/sidebar.js"></script>
+    <script src="static/js/theme.js"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-JVG08NJ1BD');
+
+        function toggleTheme() {
+            const newTheme = getTheme() === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+            saveTheme(newTheme);
+            updateThemeButton();
+        }
+
+        function updateThemeButton() {
+            const button = document.getElementById('themeToggle');
+            if (button) {
+                button.textContent = getTheme() === 'light' ? '🌙' : '☀️';
+                button.setAttribute('title', getTheme() === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode');
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --white: #ffffff;
+            --black: #000000;
+            --gradient-start: #f5f7fa;
+            --gradient-end: #c3cfe2;
+            --text: #333;
+            --text-v2: #666;
+            --header-text: #2c3e50;
+            --intro-text: #555;
+            --tips-background: #f8f9fa;
+            --settings-bg: rgba(255, 255, 255, 0.9);
+            --settings-border: #ddd;
+        }
+
+        [data-theme="dark"] {
+            --white: #000000;
+            --black: #ffffff;
+            --gradient-start: #0a0805;
+            --gradient-end: #1d273c;
+            --text: #cccccc;
+            --text-v2: #999999;
+            --header-text: #afbdd3;
+            --intro-text: #aaaaaa;
+            --tips-background: #070605;
+            --settings-bg: rgba(0, 0, 0, 0.9);
+            --settings-border: #444;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background: var(--gradient-end);;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .content {
+            padding: 120px 20px 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 48px;
+            color: var(--header-text);
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        p {
+            font-size: 18px;
+            line-height: 1.6;
+            color: var(--intro-text);
+            margin-bottom: 20px;
+        }
+
+        .highlight {
+            color: #2980b9;
+            font-weight: bold;
+        }
+
+        .team {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+
+        .team-member {
+            background-color: var(--white);
+            color: var(--black);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+            width: 200px;
+        }
+
+        .team-member:hover {
+            transform: translateY(-10px);
+        }
+
+        .team-member img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin-bottom: 10px;
+            background-color: white;
+        }
+
+        .team-member h3 {
+            font-size: 20px;
+            color: var(--header-text);
+            margin: 10px 0 5px;
+        }
+
+        .team-member p {
+            font-size: 14px;
+            color: #777;
+            margin: 0;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .theme-label {
+                display: none;
+            }
+
+            .content {
+                padding: 100px 15px 20px;
+            }
+
+            h1 {
+                font-size: 36px;
+            }
+
+            .team {
+                gap: 20px;
+            }
+
+            .team-member {
+                width: 180px;
+            }
+        }
+
+        .team-member {
+            background-color: transparent;
+            perspective: 1000px;
+            cursor: pointer;
+            padding: 0;
+            box-shadow: none;
+        }
+
+        .team-member-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            display: grid;
+            grid-template-columns: 1fr;
+        }
+
+        .team-member-front, .team-member-back {
+            grid-area: 1 / 1;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            background-color: var(--white);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
+        }
+
+        .team-member-back {
+            transform: rotateY(180deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--header-text);
+        }
+
+        .team-member.flipped .team-member-inner {
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+<body>
+<app-sidebar></app-sidebar>
+<button class="openbtn" onclick="openNav()">☰ </button>
+
+<div class="content">
+    <h1>About BusView</h1>
+    <p>Welcome to <span class="highlight">BusView</span>, your ultimate companion for navigating public transportation with ease and confidence. Our mission is to make your journey seamless by providing real-time bus stop information, trip planning, and an intuitive map experience.</p>
+    <p>Founded in 2024, BusView was created with a passion for improving urban mobility. Whether you're a daily commuter or an occasional traveler, we're here to help you find your way, one stop at a time.</p>
+
+    <div class="team">
+        <div class="team-member" id="secret-card" onclick="handleSecretTap()">
+            <div class="team-member-inner">
+                <div class="team-member-front">
+                    <img src="/static/icons/member.jpg" alt="Team Member">
+                    <h3>Anready (Alex)</h3>
+                    <p>Founder & Developer</p>
+                </div>
+                <div class="team-member-back">
+                    <h3 id="hiddenText"></h3>
+                </div>
+            </div>
+        </div>
+        <!--        <div class="team-member">-->
+        <!--            <img src="icons/member.png" alt="Team Member">-->
+        <!--            <h3>Sofia</h3>-->
+        <!--            <p>UI/UX Designer</p>-->
+        <!--        </div>-->
+    </div>
+
+</div>
+
+<footer>
+    <p>&copy; 2025 BusView. All rights reserved.</p>
+</footer>
+
+<script>
+    let flipped = false;
+    let tapCount = 0;
+    let lastTapTime = 0;
+    const MAX_DELAY = 200;
+
+    async function handleSecretTap() {
+        const card = document.getElementById('secret-card');
+        const currentTime = new Date().getTime();
+        const timeDiff = currentTime - lastTapTime;
+
+        if (flipped === false && timeDiff < MAX_DELAY && timeDiff > 0) {
+            tapCount++;
+        } else if (flipped === true) {
+            flipped = false;
+            card.classList.toggle('flipped');
+            lastTapTime = currentTime;
+            tapCount = 0;
+            return;
+        } else {
+            tapCount = 1;
+        }
+
+        lastTapTime = currentTime;
+
+        if (tapCount >= 5) {
+            const response = await fetch('/api/text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Auth': `cat`,
+                }
+            });
+
+            document.getElementById("hiddenText").innerHTML = await response.text();
+            flipped = true;
+            card.classList.toggle('flipped');
+            tapCount = 0;
+        }
+    }
+</script>
+</body>
+</html>
