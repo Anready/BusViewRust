@@ -7,12 +7,9 @@ use axum::{routing::get, Router};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get_service, post};
-use serde::Deserialize;
-use sqlx::sqlite::SqlitePoolOptions;
-use sqlx::SqlitePool;
 use tower_http::services::{ServeDir, ServeFile};
 use crate::emulation::emulation::Emulation;
-
+use crate::emulation::structures::CacheData;
 
 impl AppState {
     const FILE_PATH: &str = "./server_data/";
@@ -20,35 +17,32 @@ impl AppState {
 
 pub struct AppState {
     pub last_updated: Mutex<u128>,
-    db: SqlitePool,
+}
+
+pub struct ServerData {
+    pub limassol: tokio::sync::RwLock<Emulation>,
+    pub paphos: tokio::sync::RwLock<Emulation>,
+    pub larnaca: tokio::sync::RwLock<Emulation>,
+    pub nicosia: tokio::sync::RwLock<Emulation>,
+    pub intercity: tokio::sync::RwLock<Emulation>,
+
+    pub last_buses_fetched: u128,
+    pub cache_buses: tokio::sync::RwLock<CacheData>,
 }
 
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().ok();
-    let db_url = std::env::var("DATABASE_URL").unwrap_or("sqlite:contacts.db".into());
 
-    let pool = SqlitePoolOptions::new()
-        .max_connections(5)
-        .connect(&db_url)
-        .await
-        .expect("Не удалось подключиться к SQLite");
-
-    sqlx::query("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)")
-        .execute(&pool)
-        .await
-        .expect("Не удалось создать таблицу");
-
-
-    let shared_state = Arc::new(AppState {
-        db: pool,
-        last_updated: Mutex::new(0),
+    let server_data = Arc::new(ServerData {
+        limassol: tokio::sync::RwLock::new(Emulation::new(6).await),
+        paphos: tokio::sync::RwLock::new(Emulation::new(2).await),
+        larnaca: tokio::sync::RwLock::new(Emulation::new(10).await),
+        nicosia: tokio::sync::RwLock::new(Emulation::new(9).await),
+        intercity: tokio::sync::RwLock::new(Emulation::new(5).await),
+        last_buses_fetched: 0,
+        cache_buses: tokio::sync::RwLock::new(CacheData::default()),
     });
-
-    let mut limassol = Emulation::new(
-        6,
-        shared_state.clone(),
-    ).await;
 
     let app = Router::new()
         .route("/", get_service(ServeFile::new("./templates/index.html")))
@@ -66,7 +60,7 @@ async fn main() {
 
         .route("/api/verify-human", post(controllers::access::verify_and_issue_token))
         .route("/api/validate-token", post(controllers::access::verify_token))
-        .with_state(shared_state)
+        .with_state(server_data.clone())
         .fallback_service(ServeFile::new("./static/error/404.html"));
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
