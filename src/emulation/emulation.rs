@@ -214,4 +214,40 @@ impl Emulation {
             })
             .collect()
     }
+
+    pub async fn departure_time_from_stop(&mut self, bus: u128, stop_id: u128) -> Vec<String> {
+        if self.is_update_needed() {
+            self.update().await;
+        }
+
+        let current_time = get_time();
+        let mut all_times_for_stop: Vec<String> = Vec::new();
+
+        for (id, stop_time_list) in &self.all_stop_times {
+            if self.all_route_trips.get(id).unwrap().route_id != bus {
+                continue;
+            }
+
+            let last_stop = stop_time_list.last().unwrap();
+
+            if  last_stop.departure_time + last_stop.departure_date < current_time {
+                continue;
+            }
+
+            if !is_today(last_stop.departure_date) {
+                continue;
+            }
+
+            for stop_time in stop_time_list {
+                if stop_time.stop_id != stop_id {
+                    continue;
+                }
+
+                all_times_for_stop.push(stop_time.trip_id.to_string() + &*"_".to_string() + &*(stop_time.departure_time + stop_time.departure_date).to_string());
+                break
+            }
+        };
+
+        all_times_for_stop
+    }
 }

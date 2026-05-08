@@ -327,30 +327,33 @@ class BottomSheet {
                 this.busList.innerHTML = '<li class="bus-item loading">Loading timetable...</li>';
             }
 
-            const times = await this.app.getTimeStopData(this.stop);
+            const rawData = await this.app.getTimeStopData(this.stop);
 
             if (this.activeTab !== 'timetable') {
                 return;
             }
 
-            const sortedTimes = times.sort((a, b) => {
-                const [ha, ma] = a.split(':').map(Number);
-                const [hb, mb] = b.split(':').map(Number);
-                return ha !== hb ? ha - hb : ma - mb;
-            });
+            const parsedTimes = rawData.map(entry => {
+                const [tripId, ts] = entry.split('_');
+                return { tripId, timestamp: parseInt(ts) };
+            }).sort((a, b) => a.timestamp - b.timestamp);
 
-            const sorted = sortedTimes.map(t => {
-                return t.replace(/:00$/, '');
+            const timeFormatter = new Intl.DateTimeFormat('en-GB', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+                timeZone: 'UTC'
             });
 
             this.busList.innerHTML = '';
-            if (sorted.length === 0) {
+
+            if (parsedTimes.length === 0) {
                 const listItem = document.createElement('li');
                 listItem.classList.add('bus-item');
-                listItem.textContent = "No buses in the next 2 hours";
+                listItem.textContent = "No buses scheduled";
                 this.busList.appendChild(listItem);
             } else {
-                sorted.forEach((bus) => {
+                parsedTimes.forEach((bus) => {
                     const listItem = document.createElement('li');
                     listItem.classList.add('bus-item');
 
@@ -359,38 +362,30 @@ class BottomSheet {
                     container.style.alignItems = 'center';
                     container.style.gap = '8px';
 
-                    const splitBus = bus.split("_");
+                    const timeString = timeFormatter.format(new Date(bus.timestamp));
 
                     const textSpan = document.createElement('span');
-                    textSpan.textContent = "Bus " + splitBus[0] + " arriving at: " + splitBus[1];
+                    textSpan.textContent = `${bus.tripId} arriving at: ${timeString}`;
                     container.appendChild(textSpan);
 
                     const infoIcon = document.createElement('span');
                     infoIcon.innerHTML = `
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="16" x2="12" y2="12"></line>
-                            <circle cx="12" cy="8" r="0.5" fill="currentColor"></circle>
-                        </svg>
-                    `;
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <circle cx="12" cy="8" r="0.5" fill="currentColor"></circle>
+                    </svg>
+                `;
                     infoIcon.style.cursor = 'pointer';
-                    infoIcon.style.userSelect = 'none';
-                    infoIcon.style.color = 'var(--black)';
                     infoIcon.style.display = 'inline-flex';
                     infoIcon.style.alignItems = 'center';
-                    infoIcon.title = 'This is timetable info and can be not accurate';
+                    infoIcon.title = 'This is timetable info and may not be accurate';
 
                     infoIcon.addEventListener('click', (e) => {
                         e.stopPropagation();
                         this.app.showWarning("warningTimetable");
-
-                        if (this.notificationTimer != null) {
-                            clearTimeout(this.notificationTimer);
-                        }
-
-                        this.notificationTimer = setTimeout(() => {
-                            this.app.hideWarning("warningTimetable");
-                        }, 3000);
+                        if (this.notificationTimer) clearTimeout(this.notificationTimer);
+                        this.notificationTimer = setTimeout(() => this.app.hideWarning("warningTimetable"), 3000);
                     });
 
                     container.appendChild(infoIcon);
@@ -406,7 +401,6 @@ class BottomSheet {
                         const listItem = document.createElement('li');
                         listItem.classList.add('bus-item');
                         listItem.textContent = bus.name;
-
                         listItem.addEventListener('click', () => {
                             this.app.map.flyTo({
                                 center: [bus.bus._lngLat.lng, bus.bus._lngLat.lat],
@@ -414,34 +408,36 @@ class BottomSheet {
                                 duration: 1500
                             });
                         });
-
                         this.busList.appendChild(listItem);
                     });
                 }
             } else {
-                const now = new Date();
-                const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                const nowSeconds = Math.floor(Date.now() / 1000);
 
-                const sorted = this.cachedTimesInfo.sort().map(t => {
-                    const [h, m] = t.split(':').map(Number);
-                    const totalMinutes = h * 60 + m;
-                    return {
-                        time: t,
-                        minutesLeft: totalMinutes - nowMinutes
-                    };
-                }).filter(t => t.minutesLeft >= 0 && t.minutesLeft <= 120);
+                const upcoming = this.cachedTimesInfo
+                    .map(entry => {
+                        const [_, ts] = entry.split('_');
+                        const timestamp = parseInt(ts);
+                        return {
+                            timestamp,
+                            minutesLeft: Math.round((timestamp - nowSeconds) / 60)
+                        };
+                    })
+                    .filter(t => t.minutesLeft >= -1 && t.minutesLeft <= 120)
+                    .sort((a, b) => a.timestamp - b.timestamp);
 
                 this.busList.innerHTML = '';
-                if (sorted.length === 0) {
+                if (upcoming.length === 0) {
                     const listItem = document.createElement('li');
                     listItem.classList.add('bus-item');
                     listItem.textContent = "No buses in the next 2 hours";
                     this.busList.appendChild(listItem);
                 } else {
-                    sorted.forEach((bus) => {
+                    upcoming.forEach((bus) => {
                         const listItem = document.createElement('li');
                         listItem.classList.add('bus-item');
-                        listItem.textContent = "TT Bus: " + bus.minutesLeft + "min";
+                        const displayTime = bus.minutesLeft <= 0 ? "Now" : `${bus.minutesLeft} min`;
+                        listItem.textContent = `TT Bus: ${displayTime}`;
                         this.busList.appendChild(listItem);
                     });
                 }
@@ -510,7 +506,7 @@ class BottomSheet {
 
         if (s) {
             const params = new URLSearchParams(window.location.search);
-            params.set('stop', this.currentStopName);
+            params.set('stop', this.stop.stopId);
             history.replaceState({}, '', `${location.pathname}?${params}`);
 
             this.open();
@@ -1932,6 +1928,7 @@ class BusRoutesApp {
         const selectedEl = this.createSelectedStopElement();
         marker.getElement().innerHTML = selectedEl.innerHTML;
         marker.stopName = stop.stopName;
+        marker.stopId = stop.stopId;
 
         const focusStopButton = document.getElementById('focusStopButton');
         focusStopButton.classList.remove('hiddenInfo');
@@ -1976,7 +1973,7 @@ class BusRoutesApp {
     async getTimeStopData(stop) {
         try {
             const token = localStorage.getItem('accessToken');
-            const url = `/api/departureTimeStop?bus=${this.getLongName(this.currentRouteName)[0]}&stop=${encodeURIComponent(stop.stopName)}`;
+            const url = `/api/departureTimeStop?bus=${this.getLongNameRaw(this.currentRouteName)[0]}&stop=${encodeURIComponent(stop.stopId)}`;
             const response = await fetch(url, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json',
@@ -2081,6 +2078,18 @@ class BusRoutesApp {
         return updated;
     }
 
+
+    getLongNameRaw(routeName) {
+        const route = this.routes.find(r => r.split("###")[0] === routeName);
+        if (!route) return '';
+
+        const updated = route.split("###")[1].split(",").map(el => {
+            return el;
+        });
+
+        return updated;
+    }
+
     async getPoints(routeName, isRoute) {
         const route = this.routes.find(r => r.split("###")[0] === routeName);
         for (let id of route.split("###")[1].split(",")){
@@ -2088,9 +2097,9 @@ class BusRoutesApp {
                 id = id.substring(1);
             }
 
-            const routeLink = "https://raw.githubusercontent.com/Anready/BusRoutes/refs/heads/main/buses/" + id;
+            const routeLink = "https://raw.githubusercontent.com/Anready/BusRoutes/refs/heads/main/new/";
 
-            const response = await fetch(isRoute ? `${routeLink}.json` : `${routeLink}stops.json`);
+            const response = await fetch(isRoute ? `${routeLink}/routes/${id}.json` : `${routeLink}/stops/${id}stops.json`);
             if (response.ok) {
                 const newParams = new URLSearchParams();
                 newParams.set('bus', id);
@@ -2106,10 +2115,10 @@ class BusRoutesApp {
     parseUrlParameters() {
         const urlParams = new URLSearchParams(window.location.search);
         const busId = urlParams.get('bus');
-        const stopName = urlParams.get('stop');
+        const stopId = urlParams.get('stop');
 
-        if (busId || stopName) {
-            return { busId, stopName: stopName ? decodeURIComponent(stopName) : null };
+        if (busId || stopId) {
+            return { busId, stopId: stopId ? decodeURIComponent(stopId) : null };
         }
 
         return null;
@@ -2125,10 +2134,10 @@ class BusRoutesApp {
         return null;
     }
 
-    async findStopByName(stopName, routeName) {
+    async findStopById(stopId, routeName) {
         try {
             const stops = await this.getPoints(routeName, false);
-            return stops.find(stop => stop.name === stopName);
+            return stops.find(stop => stop.id === parseInt(stopId, 10));
         } catch (error) {
             console.error('Error finding stop by name:', error);
             return null;
@@ -2150,13 +2159,12 @@ class BusRoutesApp {
         const infoButton = document.getElementById('infoButton');
         infoButton.classList.remove('hiddenInfo');
 
-        if (params.stopName) {
-            const stop = await this.findStopByName(params.stopName, routeName);
+        if (params.stopId) {
+            const stop = await this.findStopById(params.stopId, routeName);
             if (stop) {
-
                 setTimeout(() => {
                     const marker = this.allStops.find(m =>
-                        m && m.stopName === params.stopName
+                        m && m.stopId === parseInt(params.stopId, 10)
                     );
                     if (marker) {
                         this.selectStop(marker, marker);
@@ -2169,7 +2177,7 @@ class BusRoutesApp {
 
     async loadRoutes() {
         try {
-            const response = await fetch('https://raw.githubusercontent.com/Anready/BusRoutes/refs/heads/main/buses/routesTEST.json');
+            const response = await fetch('https://raw.githubusercontent.com/Anready/BusRoutes/refs/heads/main/new/routes_list.json');
             this.routes = await response.json();
 
             const urlParams = this.parseUrlParameters();
@@ -2220,6 +2228,7 @@ class BusRoutesApp {
                 const marker = new maplibregl.Marker({ element: el })
                     .setLngLat([stop.lng, stop.lat]);
                 marker.stopName = stop.name;
+                marker.stopId = stop.id;
 
                 el.addEventListener('click', () => this.selectStop(marker, stop));
 

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use serde::Serialize;
-use crate::controllers::buses::GtfsResponse;
+use crate::controllers::structures::GtfsResponse;
 
 pub struct Stop {
     pub stop_name: String,

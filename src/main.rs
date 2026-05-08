@@ -57,6 +57,7 @@ async fn main() {
 
         .route("/api/buses", get(controllers::buses::get_vehicles_json))
         .route("/api/planJourney", post(controllers::buses::proxy_plan_journey))
+        .route("/api/departureTimeStop", get(controllers::buses::departure_time_from_stop))
 
         .route("/api/verify-human", post(controllers::access::verify_and_issue_token))
         .route("/api/validate-token", post(controllers::access::verify_token))

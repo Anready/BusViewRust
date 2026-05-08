@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use axum::body::Bytes;
-use axum::extract::State;
+use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use axum::response::IntoResponse;
@@ -9,19 +9,11 @@ use futures::future::join_all;
 use gtfs_rt::FeedMessage;
 use prost::Message;
 use reqwest::Client;
-use serde::{Serialize};
 use crate::controllers::access::Claims;
 use crate::emulation::structures::{BusDetails, Buses};
 use crate::{Errors, ServerData};
+use crate::controllers::structures::{DepartureFromStopParams, DepartureFromStopResponse, GtfsResponse};
 use crate::helpers::utils::get_time;
-
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct GtfsResponse {
-    pub status: String,
-    pub realtime: Buses,
-    pub emulated: Buses,
-}
 
 pub async fn get_vehicles_json(
     _: Claims,
@@ -170,4 +162,33 @@ pub async fn proxy_plan_journey(
             ).into_response()
         }
     }
+}
+
+pub async fn departure_time_from_stop(
+    _claims: Claims,
+    Query(params): Query<DepartureFromStopParams>,
+    State(data): State<Arc<ServerData>>
+) -> Result<Json<DepartureFromStopResponse>, Errors> {
+    let bus_id = params.bus.to_string();
+    let mut all_times = Vec::new();
+    if bus_id.starts_with('9') {
+        let mut nicosia_lock = data.nicosia.write().await;
+        all_times = nicosia_lock.departure_time_from_stop(params.bus as u128, params.stop as u128).await
+    } else if bus_id.starts_with('2') {
+        let mut larnaca_lock = data.larnaca.write().await;
+        all_times = larnaca_lock.departure_time_from_stop(params.bus as u128, params.stop as u128).await
+    } else if bus_id.starts_with('3') {
+        let mut paphos_lock = data.paphos.write().await;
+        all_times = paphos_lock.departure_time_from_stop(params.bus as u128, params.stop as u128).await
+    } else if bus_id.starts_with('5') {
+        let mut intercity_lock = data.intercity.write().await;
+        all_times = intercity_lock.departure_time_from_stop(params.bus as u128, params.stop as u128).await
+    } else if bus_id.starts_with('1') {
+        let mut limassol_lock = data.limassol.write().await;
+        all_times = limassol_lock.departure_time_from_stop(params.bus as u128, params.stop as u128).await
+    }
+
+    Ok(Json(DepartureFromStopResponse{
+        buses: all_times,
+    }))
 }
