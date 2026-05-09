@@ -1,5 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use chrono::{DateTime, Datelike, Weekday};
 use crate::AppState;
 use crate::emulation::structures::{BusDetails, Shape, Stop, StopTime, Trip};
 use crate::helpers::utils::{calculate_route_distance, get_time, is_today, load_from_disk, parse_date, parse_time_to_ms};
@@ -109,12 +110,11 @@ impl Emulation {
         let stops = load_from_disk(self.emulation_id, "stops".parse().unwrap()).await;
         for stop in stops {
             let id = stop[0].parse::<u128>().unwrap_or(0);
-            let name = stop[2].parse::<String>().unwrap_or("".to_string());
 
             let lat = stop[4].parse::<f64>().unwrap_or(0.0);
             let lon = stop[5].parse::<f64>().unwrap_or(0.0);
 
-            self.all_stops.insert(id, Stop{stop_name: name, stop_id: id, stop_lat: lat, stop_lon: lon});
+            self.all_stops.insert(id, Stop{stop_lat: lat, stop_lon: lon});
         }
 
         self.all_stop_times.clear();
@@ -141,7 +141,7 @@ impl Emulation {
         let shapes = load_from_disk(self.emulation_id, "shapes".parse().unwrap()).await;
         for shape in shapes {
             let id = shape[0].parse::<u128>().unwrap_or(0);
-            let seq = shape[3].parse::<u32>().unwrap_or(0);
+            //let seq = shape[3].parse::<u32>().unwrap_or(0);
 
             let lat = shape[1].parse::<f64>().unwrap_or(0.0);
             let lon = shape[2].parse::<f64>().unwrap_or(0.0);
@@ -174,10 +174,6 @@ impl Emulation {
             let hours_difference = ((route.departure_date + route.departure_time) as f64 - current_time as f64) / 3_600_000.0;
 
             let bus_position = calculate_route_distance(current_stop, route_shape, 25.0 * hours_difference);
-
-            if route.trip_id == 17767148 {
-                println!("{},{},{},{}", bus_position.shape_lon, bus_position.shape_lat, route.stop_seq, (route.departure_time));
-            }
 
             let bus = BusDetails {
                 label: route.trip_id.to_string(),
@@ -249,5 +245,42 @@ impl Emulation {
         };
 
         all_times_for_stop
+    }
+
+    pub async fn departure_time_from_start(&mut self) -> HashMap<u128, HashSet<String>> {
+        if self.is_update_needed() {
+            self.update().await;
+        }
+
+        let mut all_times: HashMap<u128, HashSet<String>> = HashMap::new();
+
+        for (id, stop_time_list) in &self.all_stop_times {
+            let first_stop = stop_time_list.first().expect("Stop list is empty");
+
+            let route_id = self.all_route_trips
+                .get(&id)
+                .expect("Route not found")
+                .route_id;
+
+            let current_stop_time = first_stop.departure_time;
+
+            let date_id = self.get_date_id(first_stop.departure_date);
+            let full_line = format!("{}_{}", date_id, current_stop_time);
+
+            all_times.entry(route_id)
+                .or_insert_with(HashSet::new)
+                .insert(full_line);
+        }
+
+        all_times
+    }
+
+    fn get_date_id(&self, date: u128) -> &'static str {
+        let datetime = DateTime::from_timestamp_millis(date as i64).unwrap();
+        match datetime.weekday() {
+            Weekday::Sat => "2",
+            Weekday::Sun => "3",
+            _ => "1",
+        }
     }
 }

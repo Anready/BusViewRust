@@ -9,7 +9,7 @@ use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get_service, post};
 use tower_http::services::{ServeDir, ServeFile};
 use crate::emulation::emulation::Emulation;
-use crate::emulation::structures::CacheData;
+use crate::emulation::structures::{CacheData, CacheDataDepartures};
 
 impl AppState {
     const FILE_PATH: &str = "./server_data/";
@@ -20,14 +20,14 @@ pub struct AppState {
 }
 
 pub struct ServerData {
-    pub limassol: tokio::sync::RwLock<Emulation>,
-    pub paphos: tokio::sync::RwLock<Emulation>,
-    pub larnaca: tokio::sync::RwLock<Emulation>,
-    pub nicosia: tokio::sync::RwLock<Emulation>,
-    pub intercity: tokio::sync::RwLock<Emulation>,
+    limassol: tokio::sync::RwLock<Emulation>,
+    paphos: tokio::sync::RwLock<Emulation>,
+    larnaca: tokio::sync::RwLock<Emulation>,
+    nicosia: tokio::sync::RwLock<Emulation>,
+    intercity: tokio::sync::RwLock<Emulation>,
 
-    pub last_buses_fetched: u128,
     pub cache_buses: tokio::sync::RwLock<CacheData>,
+    pub cache_departures: tokio::sync::RwLock<CacheDataDepartures>,
 }
 
 #[tokio::main]
@@ -40,8 +40,8 @@ async fn main() {
         larnaca: tokio::sync::RwLock::new(Emulation::new(10).await),
         nicosia: tokio::sync::RwLock::new(Emulation::new(9).await),
         intercity: tokio::sync::RwLock::new(Emulation::new(5).await),
-        last_buses_fetched: 0,
         cache_buses: tokio::sync::RwLock::new(CacheData::default()),
+        cache_departures: tokio::sync::RwLock::new(CacheDataDepartures::default()),
     });
 
     let app = Router::new()
@@ -58,17 +58,18 @@ async fn main() {
         .route("/api/buses", get(controllers::buses::get_vehicles_json))
         .route("/api/planJourney", post(controllers::buses::proxy_plan_journey))
         .route("/api/departureTimeStop", get(controllers::buses::departure_time_from_stop))
+        .route("/api/departureTime", get(controllers::buses::get_departure_start_time))
 
         .route("/api/verify-human", post(controllers::access::verify_and_issue_token))
         .route("/api/validate-token", post(controllers::access::verify_token))
         .with_state(server_data.clone())
         .fallback_service(ServeFile::new("./static/error/404.html"));
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
         .unwrap();
 
-    println!("listening.. ");
+    println!("Listening.. ");
     axum::serve(listener, app).await.unwrap();
 }
 

@@ -22,8 +22,6 @@ struct TurnstileRequest {
 #[derive(Deserialize)]
 struct TurnstileResponse {
     success: bool,
-    #[serde(rename = "error-codes")]
-    error_codes: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -88,8 +86,7 @@ async fn verify_turnstile(token: &str) -> bool {
     match res {
         Ok(response) => {
             let data: TurnstileResponse = response.json().await.unwrap_or(TurnstileResponse {
-                success: false,
-                error_codes: None,
+                success: false
             });
             data.success
         }

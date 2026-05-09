@@ -1,10 +1,8 @@
 use std::collections::HashMap;
 use serde::Serialize;
-use crate::controllers::structures::GtfsResponse;
+use crate::controllers::structures::{DepartureFromStartResponse, GtfsResponse};
 
 pub struct Stop {
-    pub stop_name: String,
-    pub stop_id: u128,
     pub stop_lat: f64,
     pub stop_lon: f64
 }
@@ -52,4 +50,10 @@ pub struct Buses {
 pub struct CacheData {
     pub last_buses_fetched: u128,
     pub cached_buses_data: Option<GtfsResponse>,
+}
+
+#[derive(Default)]
+pub struct CacheDataDepartures {
+    pub last_departure_fetched: u128,
+    pub cached_departure_data: Option<DepartureFromStartResponse>,
 }

@@ -62,7 +62,7 @@ pub(crate) async fn load_from_disk(e_id: u32, file_name: String) -> Vec<Vec<Stri
             }
         }
     } else {
-        eprintln!("Ошибка: Не удалось открыть файл {}", path_str);
+        eprintln!("Failed to open file: {}", path_str);
     }
 
     all_data

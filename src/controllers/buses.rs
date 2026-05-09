@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use axum::body::Bytes;
 use axum::extract::{Query, State};
@@ -12,8 +12,8 @@ use reqwest::Client;
 use crate::controllers::access::Claims;
 use crate::emulation::structures::{BusDetails, Buses};
 use crate::{Errors, ServerData};
-use crate::controllers::structures::{DepartureFromStopParams, DepartureFromStopResponse, GtfsResponse};
-use crate::helpers::utils::get_time;
+use crate::controllers::structures::{DepartureFromStartResponse, DepartureFromStopParams, DepartureFromStopResponse, GtfsResponse};
+use crate::helpers::utils::{get_time, is_today};
 
 pub async fn get_vehicles_json(
     _: Claims,
@@ -139,7 +139,6 @@ pub async fn proxy_plan_journey(
     let target_url = "https://api.cyprusbybus.com/solverservice/api/v1/solver/planjourney";
     let client = Client::new();
 
-    // Отправляем POST запрос на целевой сервер
     let response = client
         .post(target_url)
         .header("Content-Type", "application/json")
@@ -191,4 +190,70 @@ pub async fn departure_time_from_stop(
     Ok(Json(DepartureFromStopResponse{
         buses: all_times,
     }))
+}
+
+pub async fn get_departure_start_time(
+    _: Claims,
+    State(data): State<Arc<ServerData>>
+) -> Result<Json<DepartureFromStartResponse>, Errors> {
+    {
+        let cache = data.cache_departures.read().await;
+        if let Some(ref val) = cache.cached_departure_data {
+            if is_today(cache.last_departure_fetched) {
+                return Ok(Json(val.clone()));
+            }
+        }
+    }
+    
+    let mut tasks = Vec::new();
+
+    let d = data.clone();
+    tasks.push(tokio::spawn(async move {
+        d.limassol.write().await.departure_time_from_start().await
+    }));
+
+    let d = data.clone();
+    tasks.push(tokio::spawn(async move {
+        d.paphos.write().await.departure_time_from_start().await
+    }));
+
+    let d = data.clone();
+    tasks.push(tokio::spawn(async move {
+        d.larnaca.write().await.departure_time_from_start().await
+    }));
+
+    let d = data.clone();
+    tasks.push(tokio::spawn(async move {
+        d.nicosia.write().await.departure_time_from_start().await
+    }));
+
+    let d = data.clone();
+    tasks.push(tokio::spawn(async move {
+        d.intercity.write().await.departure_time_from_start().await
+    }));
+
+    let results = join_all(tasks).await;
+
+    let mut all_times: HashMap<u128, HashSet<String>> = HashMap::new();
+
+    for res in results {
+        if let Ok(region_map) = res {
+            for (route_id, times) in region_map {
+                all_times
+                    .entry(route_id)
+                    .or_insert_with(HashSet::new)
+                    .extend(times);
+            }
+        }
+    }
+    
+    let response = DepartureFromStartResponse{buses: all_times};
+
+    {
+        let mut cache = data.cache_departures.write().await;
+        cache.cached_departure_data = Some(response.clone());
+        cache.last_departure_fetched = get_time();
+    }
+
+    Ok(Json(response))
 }

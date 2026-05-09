@@ -2494,9 +2494,7 @@ class BusRoutesApp {
 
             Object.keys(timesByDay).forEach(dayType => {
                 timesByDay[dayType].sort((a, b) => {
-                    const [hoursA, minutesA] = a.split(":").map(Number);
-                    const [hoursB, minutesB] = b.split(":").map(Number);
-                    return (hoursA * 60 + minutesA) - (hoursB * 60 + minutesB);
+                    return parseInt(a) - parseInt(b);
                 });
             });
 
@@ -2517,14 +2515,22 @@ class BusRoutesApp {
                     times += `<p style='text-align: center;'>No buses scheduled for this day</p>`;
                 } else {
                     dayTimes.forEach(time => {
-                        let displayTime = time.substring(0, 5);
+                        const timeOffset = parseInt(time);
+
+                        const startOfToday = new Date();
+                        startOfToday.setHours(0, 0, 0, 0);
+
+                        const departureTimestamp = startOfToday.getTime() + timeOffset;
+
+                        const date = new Date(departureTimestamp);
+                        const hh = String(date.getHours()).padStart(2, '0');
+                        const mm = String(date.getMinutes()).padStart(2, '0');
+
+                        let displayTime = `${hh}:${mm}`;
 
                         if (isCurrentDay) {
-                            const [hours, minutes] = time.substring(0, 5).split(":").map(Number);
-                            const departureTime = new Date();
-                            departureTime.setHours(hours, minutes, 0, 0);
-
-                            if (departureTime < now) {
+                            const now = Date.now();
+                            if (departureTimestamp < now) {
                                 displayTime += ` (departed)`;
                             }
                         }

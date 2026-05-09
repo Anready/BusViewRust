@@ -1,3 +1,4 @@
+use std::collections::{HashMap, HashSet};
 use serde::{Deserialize, Serialize};
 use crate::emulation::structures::Buses;
 
@@ -19,4 +20,10 @@ pub struct DepartureFromStopParams {
 #[serde(transparent)]
 pub struct DepartureFromStopResponse {
     pub buses: Vec<String>
+}
+
+#[derive(Clone, Serialize)]
+#[serde(transparent)]
+pub struct DepartureFromStartResponse {
+    pub buses: HashMap<u128, HashSet<String>>
 }
