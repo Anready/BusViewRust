@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use crate::controllers::structures::{DepartureFromStartResponse, GtfsResponse};
 
 pub struct Stop {
@@ -24,6 +24,41 @@ pub struct Shape {
 pub struct Trip {
     pub route_id: u128,
     pub departure_date: u128,
+}
+
+#[derive(Deserialize)]
+pub struct CalendarDateRow {
+    pub service_id: u128,
+    pub date: String,
+}
+
+#[derive(Deserialize)]
+pub struct TripRow {
+    pub route_id: u128,
+    pub service_id: u128,
+    pub trip_id: u128,
+}
+
+#[derive(Deserialize)]
+pub struct StopRow {
+    pub stop_id: u128,
+    pub stop_lat: f64,
+    pub stop_lon: f64,
+}
+
+#[derive(Deserialize)]
+pub struct StopTimeRow {
+    pub trip_id: u128,
+    pub departure_time: String,
+    pub stop_id: u128,
+    pub stop_sequence: u32,
+}
+
+#[derive(Deserialize)]
+pub struct ShapeRow {
+    pub shape_id: u128,
+    pub shape_pt_lat: f64,
+    pub shape_pt_lon: f64,
 }
 
 #[derive(Serialize, Clone)]

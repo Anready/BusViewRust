@@ -9,6 +9,7 @@ pub async fn download_and_unzip(emulation_id: u32) -> Result<String, Errors> {
         + "_google_transit.zip&rel=True";
 
     let target_dir = AppState::FILE_PATH.to_string() + &emulation_id.to_string() + "/";
+    println!("{}", target_dir);
 
     let response = reqwest::get(url)
         .await

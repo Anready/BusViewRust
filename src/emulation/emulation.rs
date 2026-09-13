@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use chrono::{DateTime, Datelike, Weekday};
 use crate::AppState;
-use crate::emulation::structures::{BusDetails, Shape, Stop, StopTime, Trip};
+use crate::emulation::structures::{BusDetails, CalendarDateRow, Shape, ShapeRow, Stop, StopRow, StopTime, StopTimeRow, Trip, TripRow};
 use crate::helpers::utils::{calculate_route_distance, get_time, is_today, load_from_disk, parse_date, parse_time_to_ms};
 
 pub(crate) struct Emulation {
@@ -75,10 +75,12 @@ impl Emulation {
 
     async fn load_all_ids(&mut self) {
         self.all_days_ids.clear();
-        let date_ids = load_from_disk(self.emulation_id, "calendar_dates".parse().unwrap()).await;
+
+        let date_ids: Vec<CalendarDateRow> = load_from_disk(self.emulation_id, "calendar_dates").await;
+
         for date_id in date_ids {
-            let id = date_id[0].parse::<u128>().unwrap_or(0);
-            let date = parse_date(&*date_id[1]);
+            let id = date_id.service_id;
+            let date = parse_date(&date_id.date);
 
             if !self.all_days_ids.contains_key(&id) || is_today(date) {
                 self.all_days_ids.insert(id, date);
@@ -89,69 +91,56 @@ impl Emulation {
     async fn load_data(&mut self) {
         self.load_all_ids().await;
 
+        // 2. TRIPS
         self.all_route_trips.clear();
-        let route_trips = load_from_disk(self.emulation_id, "trips".parse().unwrap()).await;
+        let route_trips: Vec<TripRow> = load_from_disk(self.emulation_id, "trips").await;
         for route_trip in route_trips {
-            let route_id = route_trip[0].parse::<u128>().unwrap_or(0);
-            let service_id = route_trip[1].parse::<u128>().unwrap_or(0);
-            let trip_id = route_trip[2].parse::<u128>().unwrap_or(0);
-
-            let date = self.all_days_ids.get(&service_id).copied().unwrap_or(0);
-
+            let date = self.all_days_ids.get(&route_trip.service_id).copied().unwrap_or(0);
             let trip = Trip {
-                route_id,
-                departure_date: date
+                route_id: route_trip.route_id,
+                departure_date: date,
             };
-
-            self.all_route_trips.insert(trip_id, trip);
+            self.all_route_trips.insert(route_trip.trip_id, trip);
         }
 
+        // 3. STOPS
         self.all_stops.clear();
-        let stops = load_from_disk(self.emulation_id, "stops".parse().unwrap()).await;
+        let stops: Vec<StopRow> = load_from_disk(self.emulation_id, "stops").await;
         for stop in stops {
-            let id = stop[0].parse::<u128>().unwrap_or(0);
-
-            let lat = stop[4].parse::<f64>().unwrap_or(0.0);
-            let lon = stop[5].parse::<f64>().unwrap_or(0.0);
-
-            self.all_stops.insert(id, Stop{stop_lat: lat, stop_lon: lon});
-        }
-
-        self.all_stop_times.clear();
-        let stop_times = load_from_disk(self.emulation_id, "stop_times".parse().unwrap()).await;
-        for stop_time in stop_times {
-            let id = stop_time[0].parse::<u128>().unwrap_or(0);
-            let departure_date = self.all_route_trips.get(&id).unwrap().departure_date;
-            let departure_time = parse_time_to_ms(&*stop_time[2]);
-            let stop_id = stop_time[3].parse::<u128>().unwrap_or(0);
-            let stop_seq = stop_time[4].parse::<u32>().unwrap_or(0);
-
-            let stop_time_list = self.all_stop_times.entry(id).or_insert(Vec::new());
-
-            stop_time_list.push(StopTime {
-                trip_id: id,
-                departure_date,
-                departure_time,
-                stop_id,
-                stop_seq,
+            self.all_stops.insert(stop.stop_id, Stop {
+                stop_lat: stop.stop_lat,
+                stop_lon: stop.stop_lon,
             });
         }
 
+        // 4. STOP TIMES
+        self.all_stop_times.clear();
+        let stop_times: Vec<StopTimeRow> = load_from_disk(self.emulation_id, "stop_times").await;
+        for stop_time in stop_times {
+            // Защита от кривых данных: проверяем, есть ли trip в базе
+            if let Some(trip) = self.all_route_trips.get(&stop_time.trip_id) {
+                let departure_time = parse_time_to_ms(&stop_time.departure_time);
+
+                let stop_time_list = self.all_stop_times.entry(stop_time.trip_id).or_insert(Vec::new());
+                stop_time_list.push(StopTime {
+                    trip_id: stop_time.trip_id,
+                    departure_date: trip.departure_date,
+                    departure_time,
+                    stop_id: stop_time.stop_id,
+                    stop_seq: stop_time.stop_sequence,
+                });
+            }
+        }
+
+        // 5. SHAPES
         self.all_shapes.clear();
-        let shapes = load_from_disk(self.emulation_id, "shapes".parse().unwrap()).await;
+        let shapes: Vec<ShapeRow> = load_from_disk(self.emulation_id, "shapes").await;
         for shape in shapes {
-            let id = shape[0].parse::<u128>().unwrap_or(0);
-            //let seq = shape[3].parse::<u32>().unwrap_or(0);
-
-            let lat = shape[1].parse::<f64>().unwrap_or(0.0);
-            let lon = shape[2].parse::<f64>().unwrap_or(0.0);
-
-            let shape = Shape{shape_lat: lat, shape_lon: lon};
-
-            let shapes_list = self.all_shapes.entry(id).or_insert(Vec::new());
-            shapes_list.push(
-                shape
-            );
+            let shape_list = self.all_shapes.entry(shape.shape_id).or_insert(Vec::new());
+            shape_list.push(Shape {
+                shape_lat: shape.shape_pt_lat,
+                shape_lon: shape.shape_pt_lon,
+            });
         }
     }
 

@@ -65,7 +65,7 @@ async fn main() {
         .with_state(server_data.clone())
         .fallback_service(ServeFile::new("./static/error/404.html"));
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:8443")
         .await
         .unwrap();
 

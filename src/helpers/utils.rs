@@ -1,6 +1,9 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::path::Path;
 use chrono::{Local, NaiveDate, TimeZone, Utc};
+use csv::ReaderBuilder;
+use serde::Deserialize;
 use crate::AppState;
 use crate::emulation::structures::{Shape, Stop};
 
@@ -43,22 +46,28 @@ pub fn parse_time_to_ms(time_str: &str) -> u128 {
     (hours * 3_600_000) + (minutes * 60_000) + (seconds * 1_000)
 }
 
-pub(crate) async fn load_from_disk(e_id: u32, file_name: String) -> Vec<Vec<String>> {
+pub(crate) async fn load_from_disk<T>(e_id: u32, file_name: &str) -> Vec<T>
+where
+    T: for<'de> Deserialize<'de>,
+{
     let path_str = format!("{}{}/{}.txt", AppState::FILE_PATH, e_id, file_name);
-
     let mut all_data = Vec::new();
 
-    if let Ok(file) = File::open(path_str.clone()) {
-        let reader = BufReader::new(file);
+    if !Path::new(&path_str).exists() {
+        eprintln!("File does not exist: {}", path_str);
+        return all_data;
+    }
 
-        for line in reader.lines().skip(1) {
-            if let Ok(l) = line {
-                let columns: Vec<String> = l
-                    .split(',')
-                    .map(|s| s.trim().to_string())
-                    .collect();
+    if let Ok(file) = File::open(&path_str) {
+        let mut rdr = ReaderBuilder::new()
+            .has_headers(true)
+            .trim(csv::Trim::All)
+            .from_reader(file);
 
-                all_data.push(columns);
+        for result in rdr.deserialize::<T>() {
+            match result {
+                Ok(record) => all_data.push(record),
+                Err(e) => eprintln!("Error parsing row in {}.txt: {:?}", file_name, e),
             }
         }
     } else {
@@ -81,19 +90,30 @@ fn calculate_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
 }
 
 fn find_nearest_point_index(stop: &Stop, route_coordinates: &[Shape]) -> usize {
-    (0..route_coordinates.len())
-        .min_by(|&i, &j| {
-            let dist_i = calculate_distance(
-                stop.stop_lat, stop.stop_lon,
-                route_coordinates[i].shape_lat, route_coordinates[i].shape_lon
-            );
-            let dist_j = calculate_distance(
-                stop.stop_lat, stop.stop_lon,
-                route_coordinates[j].shape_lat, route_coordinates[j].shape_lon
-            );
-            dist_i.partial_cmp(&dist_j).unwrap_or(std::cmp::Ordering::Equal)
-        })
-        .unwrap_or(0)
+    if route_coordinates.is_empty() { return 0; }
+
+    let lat_rad = stop.stop_lat.to_radians();
+    let cos_lat = lat_rad.cos();
+
+    let mut min_dist_sq = f64::MAX;
+    let mut nearest_index = 0;
+
+    for (i, point) in route_coordinates.iter().enumerate() {
+        let d_lat = point.shape_lat - stop.stop_lat;
+        let d_lon = point.shape_lon - stop.stop_lon;
+
+        let x = d_lon * cos_lat;
+        let y = d_lat;
+
+        let dist_sq = (x * x) + (y * y);
+
+        if dist_sq < min_dist_sq {
+            min_dist_sq = dist_sq;
+            nearest_index = i;
+        }
+    }
+
+    nearest_index
 }
 
 pub fn total_distance(start_index: usize, end_index: usize, route: &[Shape]) -> f64 {
@@ -108,6 +128,10 @@ pub fn total_distance(start_index: usize, end_index: usize, route: &[Shape]) -> 
 }
 
 pub fn calculate_route_distance(current: &Stop, route: &[Shape], needed_distance: f64) -> Shape {
+    if route.is_empty() {
+        return Shape { shape_lat: 0.0, shape_lon: 0.0 };
+    }
+
     let nearest_end_index = find_nearest_point_index(current, route);
 
     if nearest_end_index == 0 {
@@ -117,23 +141,24 @@ pub fn calculate_route_distance(current: &Stop, route: &[Shape], needed_distance
         };
     }
 
-    let nearest_start_index = nearest_end_index - 1;
+    let start_index = nearest_end_index - 1;
 
-    let start_index = nearest_start_index.min(nearest_end_index);
-    let end_index = nearest_start_index.max(nearest_end_index);
+    let mut total_dist = 0.0;
+    let mut final_index = start_index;
 
-    let mut total_dist = total_distance(start_index, end_index, route);
+    for i in (0..=start_index).rev() {
+        final_index = i;
+        if total_dist >= needed_distance {
+            break;
+        }
 
-    let mut i = 1;
-    while total_dist < needed_distance && start_index >= i {
-        let new_start = start_index - i;
-        if new_start == 0 { break; }
-
-        total_dist = total_distance(new_start, end_index, route);
-        i += 1;
+        if i > 0 {
+            total_dist += calculate_distance(
+                route[i - 1].shape_lat, route[i - 1].shape_lon,
+                route[i].shape_lat, route[i].shape_lon,
+            );
+        }
     }
-
-    let final_index = if start_index >= i - 1 { start_index - (i - 1) } else { 0 };
 
     Shape {
         shape_lat: route[final_index].shape_lat,
