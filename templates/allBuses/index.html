@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>All Buses | BusView</title>
+    <link id="favicon" rel="icon" href="static/favicon-light.ico" type="image/x-icon">
+    <script>
+        function setFavicon(scheme) {
+            const link = document.getElementById("favicon");
+            link.href = scheme === "dark" ? "/static/favicon-dark.ico" : "/static/favicon-light.ico";
+        }
+
+        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+        setFavicon(mq.matches ? "dark" : "light");
+        mq.addEventListener("change", e => setFavicon(e.matches ? "dark" : "light"));
+    </script>
+    <meta name="description" content="See every Cyprus public bus live on one map.">
+    <meta name="keywords" content="Cyprus buses live map, all buses, Limassol, Nicosia, Larnaca, Paphos, bus tracker">
+    <meta property="og:title" content="BusView | All Buses">
+    <meta property="og:description" content="See every Cyprus public bus live on one map.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://limassolbus.online/allBuses">
+    <meta property="og:image" content="https://limassolbus.online/static/favicon_preview.png">
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.0/dist/maplibre-gl.css" crossorigin="anonymous"/>
+    <script src="https://unpkg.com/maplibre-gl@4.7.0/dist/maplibre-gl.js" crossorigin="anonymous" defer></script>
+    <script src="https://unpkg.com/pmtiles@4.3.0/dist/pmtiles.js" defer></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
+    <link rel="stylesheet" href="static/css/styles-bar-1.0.8.css"/>
+    <link rel="stylesheet" href="static/css/allBuses-1.0.0.css"/>
+    <script src="static/js/sidebar_1.0.0.js"></script>
+    <script src="static/js/theme.js"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JVG08NJ1BD"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-JVG08NJ1BD');
+    </script>
+</head>
+<body>
+
+<app-sidebar></app-sidebar>
+<button class="openbtn" onclick="openNav()">☰ </button>
+
+<div id="map" class="all-buses-map"></div>
+
+<div class="bus-counter" id="busCounter" role="status">Loading buses…</div>
+
+<div class="verify-chip" id="verifyChip" hidden>
+    <span id="verifyText">Checking you're not a robot…</span>
+    <div id="turnstile-container"></div>
+</div>
+
+<section class="bus-sheet" id="busSheet" aria-hidden="true" aria-labelledby="busSheetName">
+    <div class="bus-sheet-grip" id="busSheetGrip">
+        <div class="bus-sheet-handle"></div>
+        <header class="bus-sheet-header">
+            <span class="route-badge" id="busSheetBadge"></span>
+            <div class="bus-sheet-title">
+                <h2 id="busSheetName"></h2>
+                <p id="busSheetMeta"></p>
+            </div>
+            <button class="bus-sheet-close" id="busSheetClose" aria-label="Close">×</button>
+        </header>
+    </div>
+    <div class="mini-map-wrap">
+        <div id="miniMap" class="mini-map"></div>
+        <div class="mini-map-status" id="miniMapStatus" hidden></div>
+    </div>
+    <button class="show-main-button" id="showOnMainMap">Show on main map</button>
+</section>
+
+<script src="static/js/mapStyle_1.0.0.js"></script>
+<script src="static/js/allBuses_1.0.0.js"></script>
+</body>
+</html>

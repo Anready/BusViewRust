@@ -46,6 +46,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get_service(ServeFile::new("./templates/index.html")))
+        .route("/allBuses", get_service(ServeFile::new("./templates/allBuses/index.html")))
         .route("/favoriteStops", get_service(ServeFile::new("./templates/favoriteStops/index.html")))
         .route("/planTrip", get_service(ServeFile::new("./templates/planTrip/index.html")))
         .route("/savedTrips", get_service(ServeFile::new("./templates/savedTrips/index.html")))

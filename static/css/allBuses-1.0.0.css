@@ -1,0 +1,215 @@
+:root {
+    --page-bg: #f7f7f7;
+    --surface: #ffffff;
+    --text: #1f2328;
+    --text-muted: #5f6b76;
+    --divider: #e6e8eb;
+    --accent: #0078d4;
+    --accent-hover: #006abc;
+    --on-accent: #ffffff;
+    --shadow: rgba(0, 0, 0, 0.18);
+}
+
+[data-theme="dark"] {
+    --page-bg: #1b2a3f;
+    --surface: #0b0b0b;
+    --text: #e6e6e6;
+    --text-muted: #9aa4ad;
+    --divider: #1f1f1f;
+    --accent: #2b8be6;
+    --accent-hover: #4a9df0;
+    --on-accent: #ffffff;
+    --shadow: rgba(0, 0, 0, 0.6);
+}
+
+[hidden] {
+    display: none !important;
+}
+
+html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--page-bg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.all-buses-map {
+    position: fixed;
+    inset: 0;
+}
+
+.bus-counter,
+.verify-chip {
+    position: fixed;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 900;
+    max-width: calc(100% - 140px);
+    padding: 8px 14px;
+    border-radius: 999px;
+    background-color: var(--surface);
+    color: var(--text);
+    box-shadow: 0 2px 8px var(--shadow);
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.verify-chip {
+    top: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    border-radius: 12px;
+    max-width: calc(100% - 32px);
+    white-space: normal;
+}
+
+/* Bottom sheet */
+.bus-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 950;
+    margin: 0 auto;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 16px calc(16px + env(safe-area-inset-bottom));
+    background-color: var(--surface);
+    color: var(--text);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    box-shadow: 0 -4px 20px var(--shadow);
+    transform: translateY(110%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box;
+}
+
+.bus-sheet.open {
+    transform: translateY(0);
+}
+
+.bus-sheet.dragging {
+    transition: none;
+}
+
+.bus-sheet-grip {
+    touch-action: none;
+}
+
+.bus-sheet-handle {
+    width: 40px;
+    height: 5px;
+    margin: 10px auto 6px;
+    border-radius: 3px;
+    background-color: var(--divider);
+}
+
+.bus-sheet-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.route-badge {
+    flex-shrink: 0;
+    min-width: 44px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background-color: var(--accent);
+    color: var(--on-accent);
+    font-weight: 700;
+    font-size: 16px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.bus-sheet-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.bus-sheet-title h2 {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.3;
+    font-weight: 600;
+}
+
+.bus-sheet-title p {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.bus-sheet-close {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background-color: var(--divider);
+    color: var(--text);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.mini-map-wrap {
+    position: relative;
+    height: 200px;
+    border-radius: 14px;
+    overflow: hidden;
+    background-color: var(--page-bg);
+}
+
+.mini-map {
+    position: absolute;
+    inset: 0;
+}
+
+.mini-map-status {
+    position: absolute;
+    left: 50%;
+    bottom: 10px;
+    transform: translateX(-50%);
+    max-width: calc(100% - 24px);
+    padding: 6px 12px;
+    border-radius: 999px;
+    background-color: var(--surface);
+    color: var(--text-muted);
+    box-shadow: 0 1px 4px var(--shadow);
+    font-size: 13px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.show-main-button {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    background-color: var(--accent);
+    color: var(--on-accent);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.show-main-button:hover {
+    background-color: var(--accent-hover);
+}
+
+.show-main-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}

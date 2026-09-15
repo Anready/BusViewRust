@@ -6,6 +6,7 @@ class SidebarComponent extends HTMLElement {
                 <span class="sidebar-label">BusView</span>
                 <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">×</a>
                 <a class="normal-btn" href="/">Home</a>
+                <a class="normal-btn" href="/allBuses">All Buses</a>
                 <a class="normal-btn" href="/favoriteStops">Favorite Stops</a>
                 <a class="normal-btn" href="/planTrip">Plan Trip</a>
                 <a class="normal-btn" href="/savedTrips">Saved Trips</a>
