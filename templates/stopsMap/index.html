@@ -14,7 +14,7 @@
     <script>
         function setFavicon(scheme) {
             const link = document.getElementById("favicon");
-            link.href = scheme === "dark" ? "favicon-dark.ico" : "favicon-light.ico";
+            link.href = scheme === "dark" ? "/static/favicon-dark.ico" : "/static/favicon-light.ico";
         }
 
         const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -29,7 +29,7 @@
     <meta property="og:description" content="Track Cyprus buses live on a map. Plan trips and see routes in real time.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://limassolbus.online">
-    <meta property="og:image" content="https://limassolbus.online/favicon_preview.png">
+    <meta property="og:image" content="https://limassolbus.online/static/favicon_preview.png">
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-JVG08NJ1BD"></script>
     <script src="static/js/theme.js"></script>
     <script>
@@ -262,14 +262,13 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <!-- Leaflet MarkerCluster JS -->
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-<script src="static/js/bus_stops.js"></script>
 <script>
     const map = L.map('map').setView([34.75, 33.25], 9);
     const bottom = document.getElementById('bottomFragment');
     let userLocationMarker = null;
     let userPosition = null;
     let currentStopId = null;
-    let stopBusesData = null;
+    let stopBusesPromise = null;
 
     if (getTheme() === 'light') {
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -279,29 +278,10 @@
         }).addTo(map);
     }
 
-    const markers = L.markerClusterGroup();
-    try {
-        stopsData.forEach((stop, id) => {
-            const marker = L.marker([stop.latitude, stop.longitude]);
+    const markers = L.markerClusterGroup({ chunkedLoading: true });
 
-            marker.on('click', function() {
-                showStopInfo(id, stop.description);
-            });
-
-            markers.addLayer(marker);
-        });
-
-        map.addLayer(markers);
-        if (stopsData.length > 0) {
-            const bounds = stopsData.map(stop => [stop.latitude, stop.longitude]);
-            map.fitBounds(bounds);
-        }
-    } catch (error) {
-        console.error('Error processing stops:', error);
-        alert('Failed to process stops data.');
-    }
-
-    fetch('https://raw.githubusercontent.com/Anready/BusRoutes/refs/heads/main/busRouteStops.json')
+    // bus_stops.json: [[stopId, description, latitude, longitude], ...]
+    fetch('/static/js/bus_stops.json')
         .then(response => {
             if (!response.ok) {
                 throw new Error('Network response was not ok');
@@ -309,19 +289,63 @@
             return response.json();
         })
         .then(stops => {
-            stopBusesData = stops;
+            stops.forEach(([id, description, latitude, longitude]) => {
+                const marker = L.marker([latitude, longitude]);
+
+                marker.on('click', function() {
+                    showStopInfo(id, description);
+                });
+
+                markers.addLayer(marker);
+            });
+
+            map.addLayer(markers);
+            if (stops.length > 0) {
+                map.fitBounds(markers.getBounds());
+            }
         })
         .catch(error => {
-            console.error('Error loading stops:', error);
-            alert('Failed to load stops data.');
+            console.error('Error processing stops:', error);
+            alert('Failed to process stops data.');
         });
 
-    function showStopInfo(stopId, stopName) {
+    // Loaded on the first stop click only.
+    // busRouteStops.min.json: {routes: [[number, direction], ...], stops: {stopId: [routeIndex, ...]}}
+    function loadStopBuses() {
+        if (!stopBusesPromise) {
+            stopBusesPromise = fetch('/static/js/busRouteStops.min.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(({ routes, stops }) => {
+                    const byStop = {};
+                    for (const [stopId, indexes] of Object.entries(stops)) {
+                        byStop[stopId] = indexes.map(i => ({ number: routes[i][0], direction: routes[i][1] }));
+                    }
+                    return byStop;
+                })
+                .catch(error => {
+                    stopBusesPromise = null;
+                    console.error('Error loading stops:', error);
+                    alert('Failed to load stops data.');
+                    return {};
+                });
+        }
+        return stopBusesPromise;
+    }
+
+    async function showStopInfo(stopId, stopName) {
         currentStopId = stopId;
 
         document.getElementById('stopTitle').textContent = stopName;
         const busList = document.getElementById('busList');
         busList.innerHTML = '';
+
+        const stopBusesData = await loadStopBuses();
+        if (currentStopId !== stopId) return;
 
         if (stopBusesData[stopId]) {
             stopBusesData[stopId].sort((a, b) => {
@@ -350,7 +374,7 @@
             <span class="bus-direction">${busDirection}</span>
         `;
                 busItem.addEventListener('click', () => {
-                    window.location.href = `/?bus=${encodeURIComponent(bus.number)}&stop=${encodeURIComponent(stopName)}`;
+                    window.location.href = `/?bus=${encodeURIComponent(bus.number)}&stop=${encodeURIComponent(stopId)}`;
                 });
 
                 busList.appendChild(busItem);

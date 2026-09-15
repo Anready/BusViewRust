@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
     <title>BusView</title>
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.0/dist/maplibre-gl.css" crossorigin="anonymous"/>
-    <script src="https://unpkg.com/maplibre-gl@4.7.0/dist/maplibre-gl.js" crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/pmtiles@4.3.0/dist/pmtiles.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@4.7.0/dist/maplibre-gl.js" crossorigin="anonymous" defer></script>
+    <script src="https://unpkg.com/pmtiles@4.3.0/dist/pmtiles.js" defer></script>
     <link rel="stylesheet" href="static/css/styles-1.2.0.css"/>
     <link rel="stylesheet" href="static/css/styles-bar-1.0.8.css" />
     <script src="static/js/sidebar.js"></script>
@@ -14,7 +14,7 @@
     <script>
         function setFavicon(scheme) {
             const link = document.getElementById("favicon");
-            link.href = scheme === "dark" ? "favicon-dark.ico" : "favicon-light.ico";
+            link.href = scheme === "dark" ? "/static/favicon-dark.ico" : "/static/favicon-light.ico";
         }
 
         const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -27,7 +27,7 @@
     <meta property="og:description" content="Track Cyprus buses live on a map. Plan trips and see routes in real time.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://limassolbus.online">
-    <meta property="og:image" content="https://limassolbus.online/favicon_preview.png">
+    <meta property="og:image" content="https://limassolbus.online/static/favicon_preview.png">
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
     <script src="static/js/theme.js"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-JVG08NJ1BD"></script>
@@ -156,8 +156,7 @@
     </div>
     <div id="map" class="map"></div>
 </div>
-<script src="static/js/script_1.1.3.7.js"></script>
-<script src="https://raw.githubusercontent.com/Anready/BusRoutes/refs/heads/main/bus_stops.js"></script>
+<script src="static/js/script_1.1.3.8.js"></script>
 
 <div id="overlay1" class="overlay"></div>
 <div id="infoWindow" class="info-window"></div>

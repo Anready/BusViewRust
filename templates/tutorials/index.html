@@ -8,7 +8,7 @@
     <script>
         function setFavicon(scheme) {
             const link = document.getElementById("favicon");
-            link.href = scheme === "dark" ? "favicon-dark.ico" : "favicon-light.ico";
+            link.href = scheme === "dark" ? "/static/favicon-dark.ico" : "/static/favicon-light.ico";
         }
 
         const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -21,7 +21,7 @@
     <meta property="og:description" content="Step-by-step guides to master BusView bus tracking platform.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://limassolbus.online">
-    <meta property="og:image" content="https://limassolbus.online/favicon_preview.png">
+    <meta property="og:image" content="https://limassolbus.online/static/favicon_preview.png">
     <link rel="stylesheet" href="static/css/tutorials-1.0.2.css">
     <link rel="stylesheet" href="static/css/styles-bar-1.0.8.css" />
     <script src="static/js/sidebar.js"></script>

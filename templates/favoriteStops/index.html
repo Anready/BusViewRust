@@ -8,7 +8,7 @@
     <script>
         function setFavicon(scheme) {
             const link = document.getElementById("favicon");
-            link.href = scheme === "dark" ? "favicon-dark.ico" : "favicon-light.ico";
+            link.href = scheme === "dark" ? "/static/favicon-dark.ico" : "/static/favicon-light.ico";
         }
 
         const mq = window.matchMedia("(prefers-color-scheme: dark)");

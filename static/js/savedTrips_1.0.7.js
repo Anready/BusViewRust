@@ -51,9 +51,10 @@ function getUserLocation() {
 
 function addUserLocationMarker() {
     if (userLocation && routeMap) {
-        // Remove existing user location marker if it exists
-        if (userLocationMarker) {
-            routeMap.removeLayer(userLocationMarker);
+        // Move the existing marker if it is still on the map
+        if (userLocationMarker && routeMap.hasLayer(userLocationMarker)) {
+            userLocationMarker.setLatLng([userLocation.lat, userLocation.lng]);
+            return;
         }
 
         userLocationMarker = L.marker([userLocation.lat, userLocation.lng], {
@@ -69,8 +70,6 @@ function addUserLocationMarker() {
         })
             .addTo(routeMap)
             .bindPopup("Your Current Location");
-
-        console.log('User location marker added at:', userLocation);
     }
 }
 
@@ -137,10 +136,23 @@ async function displaySavedTrips() {
     await loadBusStops();
 }
 
-setInterval(() => {
-    getUserLocation();
-    addUserLocationMarker();
-}, 5000);
+let locationWatchId = null;
+
+function startLocationWatch() {
+    if (locationWatchId !== null || !navigator.geolocation) return;
+
+    locationWatchId = navigator.geolocation.watchPosition(
+        (position) => {
+            userLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            };
+            addUserLocationMarker();
+        },
+        (error) => console.warn('Geolocation watch error:', error.message),
+        { enableHighAccuracy: true, maximumAge: 5000 }
+    );
+}
 
 async function getWalkingRouteOptimized(startLat, startLng, endLat, endLng) {
     // Create a cache key based on coordinates
@@ -183,6 +195,9 @@ async function getWalkingRouteOptimized(startLat, startLng, endLat, endLng) {
 
 async function showRouteMap(solutionPath) {
     const routeMapContainer = document.getElementById('route-map-container');
+
+    // Show the container first: Leaflet measures it on creation and in fitBounds
+    routeMapContainer.style.display = 'block';
 
     if (!routeMap) {
         routeMap = L.map('route-map').setView([34.674, 33.037], 13);
@@ -231,10 +246,9 @@ async function showRouteMap(solutionPath) {
             return div;
         };
         locateButton.addTo(routeMap);
-    }
 
-    // Show the container immediately and display a loading indicator
-    routeMapContainer.style.display = 'block';
+        startLocationWatch();
+    }
 
     // Create or update loading indicator
     let loadingElement = document.getElementById('route-loading');
@@ -248,8 +262,8 @@ async function showRouteMap(solutionPath) {
         loadingElement.style.display = 'block';
     }
 
-    // Trigger map resize immediately to ensure proper rendering
-    setTimeout(() => routeMap.invalidateSize(), 10);
+    // The container was hidden since the last open, so re-measure before fitBounds
+    routeMap.invalidateSize();
 
     // Clear previous layers while keeping the base tile layer
     routeMap.eachLayer(layer => {

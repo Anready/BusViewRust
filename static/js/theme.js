@@ -10,10 +10,6 @@ function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    applyTheme(getTheme());
-});
-
 function detectSystemTheme() {
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         return 'dark';
@@ -22,7 +18,8 @@ function detectSystemTheme() {
 }
 
 if (!localStorage.getItem('theme')) {
-    const systemTheme = detectSystemTheme();
-    applyTheme(systemTheme);
-    saveTheme(systemTheme);
+    saveTheme(detectSystemTheme());
 }
+
+// Applied immediately (this script is loaded in <head>) so the dark theme doesn't flash light first
+applyTheme(getTheme());

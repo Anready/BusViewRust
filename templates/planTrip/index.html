@@ -9,7 +9,7 @@
     <script>
         function setFavicon(scheme) {
             const link = document.getElementById("favicon");
-            link.href = scheme === "dark" ? "favicon-dark.ico" : "favicon-light.ico";
+            link.href = scheme === "dark" ? "/static/favicon-dark.ico" : "/static/favicon-light.ico";
         }
 
         const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -17,9 +17,6 @@
         mq.addEventListener("change", e => setFavicon(e.matches ? "dark" : "light"));
     </script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <link rel="stylesheet" href="static/css/trips-1.0.4.css"/>
 
     <meta name="description" content="Track Cyprus public buses in real time on an interactive map. Plan trips, find bus stops, and get accurate live updates.">
@@ -28,7 +25,7 @@
     <meta property="og:description" content="Track Cyprus buses live on a map. Plan trips and see routes in real time.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://limassolbus.online">
-    <meta property="og:image" content="https://limassolbus.online/favicon_preview.png">
+    <meta property="og:image" content="https://limassolbus.online/static/favicon_preview.png">
     <link rel="stylesheet" href="static/css/styles-bar-1.0.8.css" />
     <script src="static/js/sidebar.js"></script>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-JVG08NJ1BD"></script>
@@ -105,9 +102,7 @@
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-<script src="static/js/planTrip_1.0.8.js"></script>
+<script src="static/js/planTrip_1.0.9.js"></script>
 
 <script>
     document.getElementById('tripDate').min = new Date().toISOString().split('T')[0];

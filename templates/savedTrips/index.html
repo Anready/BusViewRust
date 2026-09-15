@@ -8,7 +8,7 @@
     <script>
         function setFavicon(scheme) {
             const link = document.getElementById("favicon");
-            link.href = scheme === "dark" ? "favicon-dark.ico" : "favicon-light.ico";
+            link.href = scheme === "dark" ? "/static/favicon-dark.ico" : "/static/favicon-light.ico";
         }
 
         const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -16,8 +16,6 @@
         mq.addEventListener("change", e => setFavicon(e.matches ? "dark" : "light"));
     </script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.79.0/dist/L.Control.Locate.min.css" />
     <link rel="stylesheet" href="static/css/styles-bar-1.0.8.css" />
     <script src="static/js/sidebar.js"></script>
     <link rel="stylesheet" href="static/css/trips-1.0.4.css"/>
@@ -163,7 +161,6 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol@0.79.0/dist/L.Control.Locate.min.js"></script>
-<script src="static/js/savedTrips_1.0.6.js"></script>
+<script src="static/js/savedTrips_1.0.7.js"></script>
 </body>
 </html>

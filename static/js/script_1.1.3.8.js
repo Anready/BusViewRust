@@ -577,7 +577,7 @@ class BusRoutesApp {
         this.routes = [];
         this.routeSelect = null;
         this.currentRouteCoordinates = [];
-        this.stopMarkers = [];
+        this.routeCumulativeDistances = [];
         this.busMarkers = [];
         this.bottomSheet = new BottomSheet(this);
         this.busUpdateInterval = null;
@@ -589,15 +589,21 @@ class BusRoutesApp {
 
         this.userLocationMarker = null;
 
-        this.allStops = [];
-        this.clusterRadius = 1000;
+        // route name -> route ids, filled in loadRoutes
+        this.routeIndex = new Map();
+        // "route:<id>" / "stops:<id>" -> Promise of parsed JSON (null when missing)
+        this.pointsCache = new Map();
 
-        this.sizeOfStopMarker = 32;
-        this.stopMarkerTemplate = this.createStopSVGTemplate(32);
-        this.selectedStopMarkerTemplate = this.createSelectedStopSVGTemplate();
-        this.clusterMarkerTemplate = this.createClusterSVGTemplate();
+        // {stopId, stopName, lngLat} for the current route
+        this.allStops = [];
+        this.selectedStop = null;
+        this.stopIndexCache = null;
 
         this.isSelection = true;
+
+        this.mapReady = new Promise(resolve => {
+            this.resolveMapReady = resolve;
+        });
 
         this.initMap();
         this.createGpsPermissionModal();
@@ -906,112 +912,107 @@ class BusRoutesApp {
         }, 3000);
     }
 
-    initUserLocation() {
-        if ('geolocation' in navigator) {
-            this.updateUserLocation();
-
-            setInterval(() => {
-                this.updateUserLocation();
-                console.log("1")
-            }, 5000);
-        } else {
+    async initUserLocation() {
+        if (!('geolocation' in navigator)) {
             console.log('GPS is not supported.');
+            return;
         }
-    }
 
-    updateUserLocation() {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const {latitude, longitude} = position.coords;
+        await this.mapReady;
 
-                if (!this.userLocationMarker) {
-
-                    const userEl = document.createElement('div');
-                    userEl.className = 'user-location-marker';
-                    userEl.innerHTML = `
-                    <div style="position: relative;">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="#3498db">
-                            <circle cx="12" cy="12" r="10" fill="#3498db" opacity="0.4"/>
-                            <circle cx="12" cy="12" r="5" fill="#2980b9"/>
-                        </svg>
-                    </div>
-                `;
-
-                    this.userLocationMarker = new maplibregl.Marker({
-                        element: userEl,
-                        anchor: 'center'
-                    })
-                        .setLngLat([longitude, latitude])
-                        .addTo(this.map);
-
-                    this.map.addSource('user-location-accuracy', {
-                        'type': 'geojson',
-                        'data': {
-                            'type': 'Feature',
-                            'geometry': {
-                                'type': 'Point',
-                                'coordinates': [longitude, latitude]
-                            },
-                            'properties': {
-                                'accuracy': position.coords.accuracy
-                            }
-                        }
-                    });
-
-                    this.map.addLayer({
-                        'id': 'user-location-accuracy-circle',
-                        'type': 'circle',
-                        'source': 'user-location-accuracy',
-                        'paint': {
-                            'circle-radius': {
-                                'type': 'exponential',
-                                'property': 'accuracy',
-                                'stops': [
-                                    [0, 0],
-                                    [100, 20],
-                                    [1000, 50]
-                                ]
-                            },
-                            'circle-color': '#3498db',
-                            'circle-opacity': 0.1,
-                            'circle-stroke-color': '#3498db',
-                            'circle-stroke-width': 2,
-                            'circle-stroke-opacity': 0.3
-                        }
-                    });
-
-                } else {
-
-                    this.userLocationMarker.setLngLat([longitude, latitude]);
-
-                    if (this.map.getSource('user-location-accuracy')) {
-                        this.map.getSource('user-location-accuracy').setData({
-                            'type': 'Feature',
-                            'geometry': {
-                                'type': 'Point',
-                                'coordinates': [longitude, latitude]
-                            },
-                            'properties': {
-                                'accuracy': position.coords.accuracy
-                            }
-                        });
-                    }
-                }
-            },
+        navigator.geolocation.watchPosition(
+            (position) => this.updateUserLocation(position),
             (error) => {
                 console.error('Error updating location:', error.message);
             },
             {
                 enableHighAccuracy: true,
-                timeout: 5000,
                 maximumAge: 0
             }
         );
     }
 
+    updateUserLocation(position) {
+        const {latitude, longitude} = position.coords;
+
+        if (!this.userLocationMarker) {
+
+            const userEl = document.createElement('div');
+            userEl.className = 'user-location-marker';
+            userEl.innerHTML = `
+            <div style="position: relative;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="#3498db">
+                    <circle cx="12" cy="12" r="10" fill="#3498db" opacity="0.4"/>
+                    <circle cx="12" cy="12" r="5" fill="#2980b9"/>
+                </svg>
+            </div>
+        `;
+
+            this.userLocationMarker = new maplibregl.Marker({
+                element: userEl,
+                anchor: 'center'
+            })
+                .setLngLat([longitude, latitude])
+                .addTo(this.map);
+
+            this.map.addSource('user-location-accuracy', {
+                'type': 'geojson',
+                'data': {
+                    'type': 'Feature',
+                    'geometry': {
+                        'type': 'Point',
+                        'coordinates': [longitude, latitude]
+                    },
+                    'properties': {
+                        'accuracy': position.coords.accuracy
+                    }
+                }
+            });
+
+            this.map.addLayer({
+                'id': 'user-location-accuracy-circle',
+                'type': 'circle',
+                'source': 'user-location-accuracy',
+                'paint': {
+                    'circle-radius': {
+                        'type': 'exponential',
+                        'property': 'accuracy',
+                        'stops': [
+                            [0, 0],
+                            [100, 20],
+                            [1000, 50]
+                        ]
+                    },
+                    'circle-color': '#3498db',
+                    'circle-opacity': 0.1,
+                    'circle-stroke-color': '#3498db',
+                    'circle-stroke-width': 2,
+                    'circle-stroke-opacity': 0.3
+                }
+            }, 'stop-clusters');
+
+        } else {
+
+            this.userLocationMarker.setLngLat([longitude, latitude]);
+
+            if (this.map.getSource('user-location-accuracy')) {
+                this.map.getSource('user-location-accuracy').setData({
+                    'type': 'Feature',
+                    'geometry': {
+                        'type': 'Point',
+                        'coordinates': [longitude, latitude]
+                    },
+                    'properties': {
+                        'accuracy': position.coords.accuracy
+                    }
+                });
+            }
+        }
+    }
+
     showGpsPermissionModal() {
         if (this.userLocationMarker) {
-            const latLng = this.userLocationMarker._lngLat;
+            const latLng = this.userLocationMarker.getLngLat();
             this.map.flyTo({center: [latLng.lng, latLng.lat], zoom: 16, duration: 500});
         } else {
             alert('No GPS');
@@ -1091,14 +1092,20 @@ class BusRoutesApp {
             } catch (err) {
                 console.error('Не удалось загрузить стрелку:', err);
             }
-        });
 
-        const self = this;
-        this.map.on('zoomend', function() {
-            const zoom = self.map.getZoom();
-            if (self.allStops.length > 0) {
-                self.updateStopDisplay(zoom);
+            try {
+                const [stopImage, selectedStopImage] = await Promise.all([
+                    this.loadSvgImage('/static/icons/stop.svg', 32),
+                    this.loadSvgImage('/static/icons/stop-selected.svg', 28)
+                ]);
+                this.map.addImage('stop', stopImage, { pixelRatio: 2 });
+                this.map.addImage('stop-selected', selectedStopImage, { pixelRatio: 2 });
+            } catch (err) {
+                console.error('Failed to load stop icons:', err);
             }
+
+            this.addStopLayers();
+            this.resolveMapReady();
         });
 
         const focusButton = document.createElement('button');
@@ -1539,8 +1546,8 @@ class BusRoutesApp {
     }
 
     focusOnSelectedStop() {
-        if (this.selectedStopMarker) {
-            const latLng = this.selectedStopMarker._lngLat;
+        if (this.selectedStop) {
+            const latLng = this.selectedStop.lngLat;
             this.map.flyTo({center: [latLng.lng, latLng.lat], zoom: 16, duration: 1500});
             this.bottomSheet.open();
         } else {
@@ -1591,13 +1598,14 @@ class BusRoutesApp {
 
         if (!routeName) return;
 
-        if(this.selectedStopMarker) {
+        if(this.selectedStop) {
             this.bottomSheet.close();
-            this.selectedStopMarker = null;
+            this.selectedStop = null;
+            this.updateSelectedStopIcon();
         }
 
         this.allStops = [];
-        this.updateStopDisplay(this.map.getZoom())
+        this.updateStopsSource();
 
         const infoButton = document.getElementById('infoButton');
         infoButton.classList.remove('hiddenInfo');
@@ -1613,9 +1621,7 @@ class BusRoutesApp {
     }
 
     clearMap() {
-        this.stopMarkers.forEach(marker => marker.remove());
         this.busMarkers.forEach(marker => marker.remove());
-        this.stopMarkers = [];
         this.busMarkers = [];
 
         if (this.map.getLayer('route')) {
@@ -1660,11 +1666,39 @@ class BusRoutesApp {
         });
     }
 
+    // Rasterizes an SVG at 2x for crisp icons (use with pixelRatio: 2)
+    loadSvgImage(src, size) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = size * 2;
+                canvas.height = size * 2;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(ctx.getImageData(0, 0, canvas.width, canvas.height));
+            };
+            img.onerror = reject;
+            img.src = src;
+        });
+    }
+
     async loadRoute(routeName) {
         try {
             const routePoints = await this.getPoints(routeName, true);
 
             this.currentRouteCoordinates = routePoints.map(point => [point.lat, point.lng]);
+
+            this.routeCumulativeDistances = [0];
+            for (let i = 1; i < this.currentRouteCoordinates.length; i++) {
+                const [prevLat, prevLng] = this.currentRouteCoordinates[i - 1];
+                const [lat, lng] = this.currentRouteCoordinates[i];
+                this.routeCumulativeDistances.push(
+                    this.routeCumulativeDistances[i - 1] + this.calculateDistance(prevLat, prevLng, lat, lng)
+                );
+            }
+
+            await this.mapReady;
 
             this.map.addSource('route', {
                 'type': 'geojson',
@@ -1687,7 +1721,7 @@ class BusRoutesApp {
                     'line-color': '#1976d2',
                     'line-width': 6
                 }
-            });
+            }, 'stop-clusters');
 
             this.map.addLayer({
                 'id': 'route-arrows',
@@ -1705,7 +1739,7 @@ class BusRoutesApp {
                     'icon-ignore-placement': false,
                     'visibility': 'visible'
                 }
-            });
+            }, 'stop-clusters');
 
             const bounds = this.currentRouteCoordinates.reduce(
                 (b, coord) => b.extend([coord[1], coord[0]]),
@@ -1903,38 +1937,23 @@ class BusRoutesApp {
     }
 
     updateStopInfo() {
-        if (this.selectedStopMarker) {
-            this.calculateDistancesToStop(this.selectedStopMarker, false);
+        if (this.selectedStop) {
+            this.calculateDistancesToStop(this.selectedStop, false);
         }
     }
 
     isExist(id, listIds) {
-        for (const cId in listIds) {
-            if (id === listIds[cId]) {
-                return true;
-            }
-        }
-
-        return false;
+        return listIds.includes(id);
     }
 
-    selectStop(marker, stop) {
-        if (this.selectedStopMarker) {
-            const defaultEl = this.createStopElement();
-            this.selectedStopMarker.getElement().innerHTML = defaultEl.innerHTML;
-        }
-
-        this.selectedStopMarker = marker;
-        const selectedEl = this.createSelectedStopElement();
-        marker.getElement().innerHTML = selectedEl.innerHTML;
-        marker.stopName = stop.stopName;
-        marker.stopId = stop.stopId;
+    selectStop(stop) {
+        this.selectedStop = stop;
+        this.updateSelectedStopIcon();
 
         const focusStopButton = document.getElementById('focusStopButton');
         focusStopButton.classList.remove('hiddenInfo');
 
         this.calculateDistancesToStop(stop, true);
-        this.updateStopDisplay(this.map.getZoom());
     }
 
     async calculateDistancesToStop(stop, s) {
@@ -1942,7 +1961,7 @@ class BusRoutesApp {
             const times = await this.getTimeStopData(stop);
             this.showBusDistances(null, stop, s, times);
         } else {
-            const stopLatLng = this.selectedStopMarker._lngLat;
+            const stopLatLng = this.selectedStop.lngLat;
             const busDistances = this.busMarkers.map(busMarker => {
                 const busLatLng = busMarker._lngLat;
                 const routeDistance = this.calculateRouteDistance(stopLatLng, busLatLng);
@@ -1999,7 +2018,8 @@ class BusRoutesApp {
 
     showBusDistances(buses, stop, s, times) {
         const stopName = stop.stopName || 'Stop';
-        const geoUri = `geo:${this.selectedStopMarker._lngLat.lat},${this.selectedStopMarker._lngLat.lng}?q=${this.selectedStopMarker._lngLat.lat},${this.selectedStopMarker._lngLat.lng}(${stopName})`;
+        const { lat, lng } = this.selectedStop.lngLat;
+        const geoUri = `geo:${lat},${lng}?q=${lat},${lng}(${stopName})`;
 
         this.bottomSheet.updateView(buses, stop, geoUri, s, times);
     }
@@ -2007,40 +2027,46 @@ class BusRoutesApp {
     calculateRouteDistance(startPoint, endPoint) {
         if (!this.currentRouteCoordinates.length) return -1;
 
-        const nearestStartIndex = this.findNearestPointIndex(startPoint);
+        // startPoint is the selected stop: same for every bus, so its index is cached
+        const nearestStartIndex = this.findNearestPointIndexCached(startPoint);
         const nearestEndIndex = this.findNearestPointIndex(endPoint);
 
         if (nearestStartIndex < nearestEndIndex) {
             return -1;
         }
 
-        const startIndex = Math.min(nearestStartIndex, nearestEndIndex);
-        const endIndex = Math.max(nearestStartIndex, nearestEndIndex);
+        return this.routeCumulativeDistances[nearestStartIndex] - this.routeCumulativeDistances[nearestEndIndex];
+    }
 
-        let totalDistance = 0;
-        for (let i = startIndex; i < endIndex; i++) {
-            totalDistance += this.calculateDistance(
-                this.currentRouteCoordinates[i][0], this.currentRouteCoordinates[i][1],
-                this.currentRouteCoordinates[i + 1][0], this.currentRouteCoordinates[i + 1][1]
-            );
+    findNearestPointIndexCached(point) {
+        const cache = this.stopIndexCache;
+        if (cache && cache.point === point && cache.coordinates === this.currentRouteCoordinates) {
+            return cache.index;
         }
 
-        return totalDistance;
+        const index = this.findNearestPointIndex(point);
+        this.stopIndexCache = { point, coordinates: this.currentRouteCoordinates, index };
+        return index;
     }
 
     findNearestPointIndex(point) {
-        return this.currentRouteCoordinates.reduce((nearestIndex, coord, index) => {
-            const distance = this.calculateDistance(
-                point.lat, point.lng,
-                coord[0], coord[1]
-            );
+        // Equirectangular approximation: enough to compare distances at city scale
+        const cosLat = Math.cos(this.toRadians(point.lat));
+        let nearestIndex = 0;
+        let minDistance = Infinity;
 
-            return distance < this.calculateDistance(
-                point.lat, point.lng,
-                this.currentRouteCoordinates[nearestIndex][0],
-                this.currentRouteCoordinates[nearestIndex][1]
-            ) ? index : nearestIndex;
-        }, 0);
+        this.currentRouteCoordinates.forEach(([lat, lng], index) => {
+            const dLat = lat - point.lat;
+            const dLng = (lng - point.lng) * cosLat;
+            const distance = dLat * dLat + dLng * dLng;
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestIndex = index;
+            }
+        });
+
+        return nearestIndex;
     }
 
     calculateDistance(lat1, lon1, lat2, lon2) {
@@ -2059,57 +2085,77 @@ class BusRoutesApp {
         return degrees * (Math.PI / 180);
     }
 
+    buildRouteIndex() {
+        this.routeIndex = new Map();
+        this.routes.forEach(route => {
+            const [name, ids] = route.split("###");
+            if (!this.routeIndex.has(name)) {
+                this.routeIndex.set(name, ids.split(","));
+            }
+        });
+    }
+
     getRouteLink(routeName) {
-        const route = this.routes.find(r => r.split("###")[0] === routeName);
-        return route ? route.split("###")[1].split(",")[0] : '';
+        const ids = this.routeIndex.get(routeName);
+        return ids ? ids[0] : '';
     }
 
     getLongName(routeName) {
-        const route = this.routes.find(r => r.split("###")[0] === routeName);
-        if (!route) return '';
+        const ids = this.routeIndex.get(routeName);
+        if (!ids) return [];
 
-        const updated = route.split("###")[1].split(",").map(el => {
+        return ids.map(el => {
             if (el.charAt(0) === "9") {
                 return el.substring(1);
             }
             return el;
         });
-
-        return updated;
     }
 
 
     getLongNameRaw(routeName) {
-        const route = this.routes.find(r => r.split("###")[0] === routeName);
-        if (!route) return '';
-
-        const updated = route.split("###")[1].split(",").map(el => {
-            return el;
-        });
-
-        return updated;
+        return this.routeIndex.get(routeName) || [];
     }
 
     async getPoints(routeName, isRoute) {
-        const route = this.routes.find(r => r.split("###")[0] === routeName);
-        for (let id of route.split("###")[1].split(",")){
+        const ids = this.routeIndex.get(routeName) || [];
+        for (let id of ids) {
             if (id.charAt(0) === "9") {
                 id = id.substring(1);
             }
 
-            const routeLink = "https://raw.githubusercontent.com/Anready/BusRoutes/refs/heads/main/new/";
-
-            const response = await fetch(isRoute ? `${routeLink}/routes/${id}.json` : `${routeLink}/stops/${id}stops.json`);
-            if (response.ok) {
+            const data = await this.fetchPoints(id, isRoute);
+            if (data) {
                 const newParams = new URLSearchParams();
                 newParams.set('bus', id);
 
                 const newUrl = `${location.pathname}?${newParams}`;
                 history.replaceState({}, '', newUrl);
 
-                return await response.json();
+                return data;
             }
         }
+    }
+
+    fetchPoints(id, isRoute) {
+        const key = `${isRoute ? 'route' : 'stops'}:${id}`;
+
+        if (!this.pointsCache.has(key)) {
+            const routeLink = "https://raw.githubusercontent.com/Anready/BusRoutes/refs/heads/main/new/";
+            const url = isRoute ? `${routeLink}/routes/${id}.json` : `${routeLink}/stops/${id}stops.json`;
+
+            const request = fetch(url)
+                .then(response => response.ok ? response.json() : null)
+                .catch(error => {
+                    // Don't cache network failures
+                    this.pointsCache.delete(key);
+                    throw error;
+                });
+
+            this.pointsCache.set(key, request);
+        }
+
+        return this.pointsCache.get(key);
     }
 
     parseUrlParameters() {
@@ -2125,10 +2171,9 @@ class BusRoutesApp {
     }
 
     findRouteByBusId(busId) {
-        for (const route of this.routes) {
-            const routeIds = route.split("###")[1].split(",");
+        for (const [name, routeIds] of this.routeIndex) {
             if (routeIds.includes(busId)) {
-                return route.split("###")[0];
+                return name;
             }
         }
         return null;
@@ -2137,7 +2182,14 @@ class BusRoutesApp {
     async findStopById(stopId, routeName) {
         try {
             const stops = await this.getPoints(routeName, false);
-            return stops.find(stop => stop.id === parseInt(stopId, 10));
+
+            if (/^\d+$/.test(stopId)) {
+                const stop = stops.find(stop => stop.id === parseInt(stopId, 10));
+                if (stop) return stop;
+            }
+
+            // Links from Favorite Stops carry the stop name instead of its id
+            return stops.find(stop => stop.name === stopId);
         } catch (error) {
             console.error('Error finding stop by name:', error);
             return null;
@@ -2163,12 +2215,10 @@ class BusRoutesApp {
             const stop = await this.findStopById(params.stopId, routeName);
             if (stop) {
                 setTimeout(() => {
-                    const marker = this.allStops.find(m =>
-                        m && m.stopId === parseInt(params.stopId, 10)
-                    );
-                    if (marker) {
-                        this.selectStop(marker, marker);
-                        this.map.flyTo({center: [marker._lngLat.lng, marker._lngLat.lat], zoom: 16, duration: 1500});
+                    const selected = this.allStops.find(s => s.stopId === stop.id);
+                    if (selected) {
+                        this.selectStop(selected);
+                        this.map.flyTo({center: [selected.lngLat.lng, selected.lngLat.lat], zoom: 16, duration: 1500});
                     }
                 }, 1000);
             }
@@ -2179,6 +2229,7 @@ class BusRoutesApp {
         try {
             const response = await fetch('https://raw.githubusercontent.com/Anready/BusRoutes/refs/heads/main/new/routes_list.json');
             this.routes = await response.json();
+            this.buildRouteIndex();
 
             const urlParams = this.parseUrlParameters();
             if (urlParams && urlParams.busId) {
@@ -2209,218 +2260,101 @@ class BusRoutesApp {
         try {
             const stops = await this.getPoints(routeName, false);
 
-            stops.forEach(stop => {
-                const el = document.createElement('div');
-                el.className = 'marker-class';
-                el.innerHTML = `
-<svg width="32" height="32" viewBox="0 0 2048.000000 2047.000000" preserveAspectRatio="xMidYMid meet">
-    <circle cx="1024" cy="1023.5" r="900" fill="white" stroke="none"/>
-    <g transform="translate(0.000000,2047.000000) scale(0.100000,-0.100000)" fill="#497824" stroke="none">
-        <path d="M9855 20459 c-1717 -63 -3394 -559 -4860 -1437 -577 -345 -1055 -697 -1585 -1166 -185 -164 -676 -658 -841 -846 -994 -1135 -1698 -2394 -2126 -3800 -550 -1812 -583 -3793 -93 -5622 387 -1445 1104 -2816 2064 -3948 264 -311 721 -782 996 -1026 1265 -1124 2736 -1904 4341 -2305 1566 -390 3228 -406 4792 -44 1543 356 2957 1052 4193 2062 334 274 854 771 1130 1083 769 866 1360 1795 1802 2835 930 2188 1062 4677 368 6968 -396 1306 -1060 2530 -1945 3587 -353 421 -827 897 -1251 1256 -1449 1226 -3242 2034 -5115 2303 -632 91 -1238 123 -1870 100z m2685 -2269 c428 -18 740 -51 1045 -111 981 -194 1636 -671 2042 -1487 291 -582 439 -1224 515 -2227 9 -121 13 -1290 15 -4762 l3 -4603 -685 0 -685 0 0 -419 c0 -985 -58 -1263 -282 -1367 l-63 -29 -330 0 c-380 0 -397 3 -485 82 -83 74 -126 177 -159 375 -30 182 -41 381 -48 895 l-6 463 -3177 0 -3177 0 -6 -463 c-4 -254 -11 -532 -17 -617 -25 -368 -79 -554 -190 -653 -88 -79 -105 -82 -485 -82 l-330 0 -63 29 c-102 47 -163 130 -206 278 -56 195 -76 472 -76 1081 l0 427 -685 0 -685 0 3 4607 c2 3518 6 4645 16 4763 47 596 105 988 203 1375 81 320 174 573 311 847 222 446 509 780 887 1033 526 351 1193 525 2165 564 288 12 4348 13 4635 1z"/>
-        <path d="M7835 17261 c-85 -25 -141 -56 -201 -112 -94 -90 -138 -241 -115 -396 26 -174 114 -279 287 -345 l59 -23 2375 0 2375 0 59 23 c86 32 136 64 185 117 56 60 88 132 102 228 30 200 -51 381 -209 465 -125 67 63 62 -2518 61 -2196 0 -2343 -1 -2399 -18z"/>
-        <path d="M6493 14999 c-307 -52 -519 -368 -636 -949 -113 -561 -151 -1190 -164 -2751 l-6 -829 4551 0 4552 0 0 423 c0 536 -17 1534 -30 1827 -36 790 -104 1299 -224 1662 -109 331 -261 523 -476 600 l-65 23 -3725 1 c-2061 1 -3748 -2 -3777 -7z"/>
-        <path d="M6443 8626 c-404 -77 -695 -387 -744 -792 -50 -420 216 -832 621 -962 248 -80 523 -48 752 88 84 51 204 162 264 247 219 306 224 723 13 1034 -122 180 -313 315 -524 370 -103 26 -284 34 -382 15z"/>
-        <path d="M13723 8626 c-340 -65 -604 -298 -706 -622 -85 -268 -36 -569 127 -798 59 -83 182 -197 267 -247 226 -135 502 -167 749 -87 271 87 488 302 579 573 169 505 -130 1043 -650 1170 -90 22 -278 28 -366 11z"/>
-    </g>
-</svg>`;
-                el.dataset.stopId = stop.id;
+            this.allStops = stops.map(stop => ({
+                stopId: stop.id,
+                stopName: stop.name,
+                lngLat: { lng: stop.lng, lat: stop.lat }
+            }));
 
-                const marker = new maplibregl.Marker({ element: el })
-                    .setLngLat([stop.lng, stop.lat]);
-                marker.stopName = stop.name;
-                marker.stopId = stop.id;
-
-                el.addEventListener('click', () => this.selectStop(marker, stop));
-
-                this.allStops.push(marker);
-            });
-
-            this.updateStopDisplay(this.map.getZoom());
+            await this.mapReady;
+            this.updateStopsSource();
         } catch (error) {
             console.error('Error loading stops:', error);
         }
     }
 
-    updateStopDisplay(zoom) {
-        this.stopMarkers.forEach(marker => marker.remove());
-        this.stopMarkers = [];
-
-        if (zoom >= 13.6) {
-
-            this.displayAllStops();
-        } else {
-
-            this.displayClusteredStops();
-        }
-    }
-
-    createStopSVGTemplate(size = 32) {
-        const template = document.createElement('div');
-        template.innerHTML = `
-<svg width="${size}" height="${size}" viewBox="0 0 2048.000000 2047.000000" preserveAspectRatio="xMidYMid meet">
-    <circle cx="1024" cy="1023.5" r="900" fill="white" stroke="none"/>
-    <g transform="translate(0.000000,2047.000000) scale(0.100000,-0.100000)" fill="#497824" stroke="none">
-        <path d="M9855 20459 c-1717 -63 -3394 -559 -4860 -1437 -577 -345 -1055 -697 -1585 -1166 -185 -164 -676 -658 -841 -846 -994 -1135 -1698 -2394 -2126 -3800 -550 -1812 -583 -3793 -93 -5622 387 -1445 1104 -2816 2064 -3948 264 -311 721 -782 996 -1026 1265 -1124 2736 -1904 4341 -2305 1566 -390 3228 -406 4792 -44 1543 356 2957 1052 4193 2062 334 274 854 771 1130 1083 769 866 1360 1795 1802 2835 930 2188 1062 4677 368 6968 -396 1306 -1060 2530 -1945 3587 -353 421 -827 897 -1251 1256 -1449 1226 -3242 2034 -5115 2303 -632 91 -1238 123 -1870 100z m2685 -2269 c428 -18 740 -51 1045 -111 981 -194 1636 -671 2042 -1487 291 -582 439 -1224 515 -2227 9 -121 13 -1290 15 -4762 l3 -4603 -685 0 -685 0 0 -419 c0 -985 -58 -1263 -282 -1367 l-63 -29 -330 0 c-380 0 -397 3 -485 82 -83 74 -126 177 -159 375 -30 182 -41 381 -48 895 l-6 463 -3177 0 -3177 0 -6 -463 c-4 -254 -11 -532 -17 -617 -25 -368 -79 -554 -190 -653 -88 -79 -105 -82 -485 -82 l-330 0 -63 29 c-102 47 -163 130 -206 278 -56 195 -76 472 -76 1081 l0 427 -685 0 -685 0 3 4607 c2 3518 6 4645 16 4763 47 596 105 988 203 1375 81 320 174 573 311 847 222 446 509 780 887 1033 526 351 1193 525 2165 564 288 12 4348 13 4635 1z"/>
-        <path d="M7835 17261 c-85 -25 -141 -56 -201 -112 -94 -90 -138 -241 -115 -396 26 -174 114 -279 287 -345 l59 -23 2375 0 2375 0 59 23 c86 32 136 64 185 117 56 60 88 132 102 228 30 200 -51 381 -209 465 -125 67 63 62 -2518 61 -2196 0 -2343 -1 -2399 -18z"/>
-        <path d="M6493 14999 c-307 -52 -519 -368 -636 -949 -113 -561 -151 -1190 -164 -2751 l-6 -829 4551 0 4552 0 0 423 c0 536 -17 1534 -30 1827 -36 790 -104 1299 -224 1662 -109 331 -261 523 -476 600 l-65 23 -3725 1 c-2061 1 -3748 -2 -3777 -7z"/>
-        <path d="M6443 8626 c-404 -77 -695 -387 -744 -792 -50 -420 216 -832 621 -962 248 -80 523 -48 752 88 84 51 204 162 264 247 219 306 224 723 13 1034 -122 180 -313 315 -524 370 -103 26 -284 34 -382 15z"/>
-        <path d="M13723 8626 c-340 -65 -604 -298 -706 -622 -85 -268 -36 -569 127 -798 59 -83 182 -197 267 -247 226 -135 502 -167 749 -87 271 87 488 302 579 573 169 505 -130 1043 -650 1170 -90 22 -278 28 -366 11z"/>
-    </g>
-</svg>`;
-        return template.firstElementChild;
-    }
-
-    createSelectedStopSVGTemplate() {
-        const template = document.createElement('img');
-        template.src = '/static/icons/stop-selected.svg';
-        template.width = 28;
-        template.height = 28;
-        template.loading = 'lazy';
-        return template;
-    }
-
-    createClusterSVGTemplate() {
-        const template = document.createElement('div');
-        template.innerHTML = `
-<svg width="32" height="32" viewBox="0 0 2048.000000 2047.000000" preserveAspectRatio="xMidYMid meet">
-    <circle cx="1024" cy="1023.5" r="900" fill="white" stroke="none"/>
-    <g transform="translate(0.000000,2047.000000) scale(0.100000,-0.100000)" fill="#497824" stroke="none">
-        <path d="M9855 20459 c-1717 -63 -3394 -559 -4860 -1437 -577 -345 -1055 -697 -1585 -1166 -185 -164 -676 -658 -841 -846 -994 -1135 -1698 -2394 -2126 -3800 -550 -1812 -583 -3793 -93 -5622 387 -1445 1104 -2816 2064 -3948 264 -311 721 -782 996 -1026 1265 -1124 2736 -1904 4341 -2305 1566 -390 3228 -406 4792 -44 1543 356 2957 1052 4193 2062 334 274 854 771 1130 1083 769 866 1360 1795 1802 2835 930 2188 1062 4677 368 6968 -396 1306 -1060 2530 -1945 3587 -353 421 -827 897 -1251 1256 -1449 1226 -3242 2034 -5115 2303 -632 91 -1238 123 -1870 100z m2685 -2269 c428 -18 740 -51 1045 -111 981 -194 1636 -671 2042 -1487 291 -582 439 -1224 515 -2227 9 -121 13 -1290 15 -4762 l3 -4603 -685 0 -685 0 0 -419 c0 -985 -58 -1263 -282 -1367 l-63 -29 -330 0 c-380 0 -397 3 -485 82 -83 74 -126 177 -159 375 -30 182 -41 381 -48 895 l-6 463 -3177 0 -3177 0 -6 -463 c-4 -254 -11 -532 -17 -617 -25 -368 -79 -554 -190 -653 -88 -79 -105 -82 -485 -82 l-330 0 -63 29 c-102 47 -163 130 -206 278 -56 195 -76 472 -76 1081 l0 427 -685 0 -685 0 3 4607 c2 3518 6 4645 16 4763 47 596 105 988 203 1375 81 320 174 573 311 847 222 446 509 780 887 1033 526 351 1193 525 2165 564 288 12 4348 13 4635 1z"/>
-        <path d="M7835 17261 c-85 -25 -141 -56 -201 -112 -94 -90 -138 -241 -115 -396 26 -174 114 -279 287 -345 l59 -23 2375 0 2375 0 59 23 c86 32 136 64 185 117 56 60 88 132 102 228 30 200 -51 381 -209 465 -125 67 63 62 -2518 61 -2196 0 -2343 -1 -2399 -18z"/>
-        <path d="M6493 14999 c-307 -52 -519 -368 -636 -949 -113 -561 -151 -1190 -164 -2751 l-6 -829 4551 0 4552 0 0 423 c0 536 -17 1534 -30 1827 -36 790 -104 1299 -224 1662 -109 331 -261 523 -476 600 l-65 23 -3725 1 c-2061 1 -3748 -2 -3777 -7z"/>
-        <path d="M6443 8626 c-404 -77 -695 -387 -744 -792 -50 -420 216 -832 621 -962 248 -80 523 -48 752 88 84 51 204 162 264 247 219 306 224 723 13 1034 -122 180 -313 315 -524 370 -103 26 -284 34 -382 15z"/>
-        <path d="M13723 8626 c-340 -65 -604 -298 -706 -622 -85 -268 -36 -569 127 -798 59 -83 182 -197 267 -247 226 -135 502 -167 749 -87 271 87 488 302 579 573 169 505 -130 1043 -650 1170 -90 22 -278 28 -366 11z"/>
-    </g>
-</svg>`;
-        return template.firstElementChild;
-    }
-
-    createStopElement() {
-        const el = document.createElement('div');
-        el.className = 'marker-class';
-        el.appendChild(this.stopMarkerTemplate.cloneNode(true));
-        return el;
-    }
-
-    createSelectedStopElement() {
-        const el = document.createElement('div');
-        el.style.width = '28px';
-        el.style.height = '28px';
-        el.appendChild(this.selectedStopMarkerTemplate.cloneNode(true));
-        return el;
-    }
-
-    displayAllStops() {
-        this.stopMarkers.forEach(marker => marker.remove());
-        this.stopMarkers = [];
-
-        const addAllMarkers = (stops) => {
-            stops.forEach(stop => {
-                const isSelected = this.selectedStopMarker &&
-                    Math.abs(this.selectedStopMarker._lngLat.lat - stop._lngLat.lat) < 0.00001 &&
-                    Math.abs(this.selectedStopMarker._lngLat.lng - stop._lngLat.lng) < 0.00001;
-
-                const el = document.createElement('div');
-                el.className = 'marker-class';
-
-                if (isSelected) {
-                    el.appendChild(this.selectedStopMarkerTemplate.cloneNode(true));
-                } else {
-                    el.appendChild(this.stopMarkerTemplate.cloneNode(true));
-                }
-
-                const marker = new maplibregl.Marker({
-                    element: el,
-                    anchor: 'center'
-                })
-                    .setLngLat([stop._lngLat.lng, stop._lngLat.lat])
-                    .addTo(this.map);
-
-                marker.stopName = stop.stopName;
-                el.addEventListener('click', () => this.selectStop(marker, stop), { passive: true });
-                this.stopMarkers.push(marker);
-            });
-        };
-
-        addAllMarkers(this.allStops);
-    }
-
-    displayClusteredStops() {
-        const clusters = this.createClusters(this.allStops);
-        const smaller = 32 - (16 - this.map.getZoom())
-
-        if (smaller !== this.sizeOfStopMarker) {
-            this.clusterMarkerTemplate = this.createStopSVGTemplate(smaller);
-        }
-
-        clusters.forEach(cluster => {
-            const el = document.createElement('div');
-            el.className = 'cluster-marker';
-
-            const clusterIcon = document.createElement('div');
-            clusterIcon.className = 'cluster-icon';
-            clusterIcon.appendChild(this.clusterMarkerTemplate.cloneNode(true));
-
-            el.appendChild(clusterIcon);
-            el.style.width = '40px';
-            el.style.height = '40px';
-            el.style.cursor = 'pointer';
-
-            const marker = new maplibregl.Marker({ element: el })
-                .setLngLat([cluster.centerLng, cluster.centerLat])
-                .addTo(this.map);
-
-            marker.getElement().clusterStops = cluster.stops;
-            el.addEventListener('click', () => this.handleClusterClick(marker, cluster), { passive: true });
-
-            this.stopMarkers.push(marker);
+    addStopLayers() {
+        this.map.addSource('stops', {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] },
+            cluster: true,
+            clusterMaxZoom: 13,
+            clusterRadius: 40
         });
-    }
 
-    createClusters(stops) {
-        const clusters = [];
-        const processedStops = new Set();
+        // Zoomed out, stops and clusters are drawn slightly smaller: (16 + zoom) px of 32
+        const iconSize = ['interpolate', ['linear'], ['zoom'], 0, 0.5, 13.59, 0.925, 13.6, 1];
 
-        stops.forEach((stop, index) => {
-            if (processedStops.has(index)) return;
-
-            const cluster = {
-                stops: [stop],
-                centerLat: stop._lngLat.lat,
-                centerLng: stop._lngLat.lng
-            };
-
-            stops.forEach((otherStop, otherIndex) => {
-                if (index === otherIndex || processedStops.has(otherIndex)) return;
-
-                const distance = this.calculateDistance(
-                    stop._lngLat.lat, stop._lngLat.lng,
-                    otherStop._lngLat.lat, otherStop._lngLat.lng
-                );
-
-                if (distance * 1000 <= (this.clusterRadius) * (13.7 - this.map.getZoom())) {
-                    cluster.stops.push(otherStop);
-                    processedStops.add(otherIndex);
-                }
-            });
-
-            processedStops.add(index);
-
-            if (cluster.stops.length > 1) {
-                const latSum = cluster.stops.reduce((sum, s) => sum + s._lngLat.lat, 0);
-                const lngSum = cluster.stops.reduce((sum, s) => sum + s._lngLat.lng, 0);
-                cluster.centerLat = latSum / cluster.stops.length;
-                cluster.centerLng = lngSum / cluster.stops.length;
+        this.map.addLayer({
+            id: 'stop-clusters',
+            type: 'symbol',
+            source: 'stops',
+            filter: ['has', 'point_count'],
+            layout: {
+                'icon-image': 'stop',
+                'icon-size': iconSize,
+                'icon-allow-overlap': true
             }
-
-            clusters.push(cluster);
         });
 
-        return clusters;
+        this.map.addLayer({
+            id: 'stops',
+            type: 'symbol',
+            source: 'stops',
+            filter: ['!', ['has', 'point_count']],
+            layout: {
+                'icon-image': this.stopIconExpression(),
+                'icon-size': iconSize,
+                'icon-allow-overlap': true
+            }
+        });
+
+        this.map.on('click', 'stops', (e) => {
+            const stopId = e.features[0].properties.stopId;
+            const stop = this.allStops.find(s => s.stopId === stopId);
+            if (stop) {
+                this.selectStop(stop);
+            }
+        });
+
+        this.map.on('click', 'stop-clusters', (e) => {
+            const [lng, lat] = e.features[0].geometry.coordinates;
+            this.map.flyTo({center: [lng, lat], zoom: 15, duration: 1500});
+        });
+
+        ['stops', 'stop-clusters'].forEach(layer => {
+            this.map.on('mouseenter', layer, () => {
+                this.map.getCanvas().style.cursor = 'pointer';
+            });
+            this.map.on('mouseleave', layer, () => {
+                this.map.getCanvas().style.cursor = '';
+            });
+        });
     }
 
-    handleClusterClick(marker, cluster) {
-        this.map.flyTo({center: [cluster.centerLng, cluster.centerLat], zoom: 15, duration: 1500});
+    stopIconExpression() {
+        const selectedId = this.selectedStop ? this.selectedStop.stopId : -1;
+        return ['case', ['==', ['get', 'stopId'], selectedId], 'stop-selected', 'stop'];
+    }
+
+    updateSelectedStopIcon() {
+        if (this.map.getLayer('stops')) {
+            this.map.setLayoutProperty('stops', 'icon-image', this.stopIconExpression());
+        }
+    }
+
+    updateStopsSource() {
+        const source = this.map.getSource('stops');
+        if (!source) return;
+
+        source.setData({
+            type: 'FeatureCollection',
+            features: this.allStops.map(stop => ({
+                type: 'Feature',
+                geometry: { type: 'Point', coordinates: [stop.lngLat.lng, stop.lngLat.lat] },
+                properties: { stopId: stop.stopId }
+            }))
+        });
     }
 
     async loadInfoContent() {
@@ -2599,7 +2533,7 @@ class BusRoutesApp {
             }
         }
 
-        overlay.addEventListener('click', closeInfoWindow);
+        overlay.onclick = closeInfoWindow;
 
         const closeButton = infoWindow.querySelector('.info-close');
         if (closeButton) {
@@ -2687,7 +2621,6 @@ class BusRoutesApp {
         if (token) {
             if (await this.validateToken(token) === true) {
                 this.isVerifificationInProgress = false;
-                await new Promise(resolve => setTimeout(resolve, 2000));
 
                 bar.classList.remove('show');
                 bar.classList.add('shrink');

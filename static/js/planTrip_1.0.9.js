@@ -1,7 +1,6 @@
 let busStops = new Map();
 let map;
 let geocoder;
-let markers;
 let activeField = null;
 let selectedPoint = null;
 let nearestStopId = null;
@@ -155,8 +154,6 @@ function initializeMapWithoutGeolocation() {
             }
         });
     }, 100);
-
-    markers = L.markerClusterGroup({ maxClusterRadius: 50, chunkedLoading: true });
 
     // Create a temporary marker for user selection
     let tempMarker = null;
@@ -334,25 +331,6 @@ async function loadBusStops() {
     }
 }
 
-function createMarkers() {
-    busStops.forEach((stop, id) => {
-        const marker = L.marker([stop.latitude, stop.longitude], {
-            opacity: 0.7,  // Make bus stop markers slightly transparent
-            icon: L.divIcon({
-                className: 'bus-stop-marker',
-                html: '<div style="background-color: #0078d4; width: 8px; height: 8px; border-radius: 50%; border: 2px solid white;"></div>',
-                iconSize: [16, 16],
-                iconAnchor: [8, 8]
-            })
-        });
-
-        marker.bindPopup(`<div><strong>${stop.description}</strong><br>ID: ${id}</div>`);
-        markers.addLayer(marker);
-    });
-
-    map.addLayer(markers);
-}
-
 async function findRoute() {
     const startId = startIdInput.value;
     const endId = endIdInput.value;
@@ -379,6 +357,9 @@ const routeColors = [
 async function showRouteMap(solutionPath) {
     const routeMapContainer = document.getElementById('route-map-container');
 
+    // Show the container first: Leaflet measures it on creation and in fitBounds
+    routeMapContainer.style.display = 'block';
+
     if (!routeMap) {
         routeMap = L.map('route-map').setView([34.674, 33.037], 13);
         if (getTheme() === 'light') {
@@ -389,9 +370,6 @@ async function showRouteMap(solutionPath) {
             }).addTo(routeMap);
         }
     }
-
-    // Show the container immediately and display a loading indicator
-    routeMapContainer.style.display = 'block';
 
     // Create or update loading indicator
     let loadingElement = document.getElementById('route-loading');
@@ -405,8 +383,8 @@ async function showRouteMap(solutionPath) {
         loadingElement.style.display = 'block';
     }
 
-    // Trigger map resize immediately to ensure proper rendering
-    setTimeout(() => routeMap.invalidateSize(), 10);
+    // The container was hidden since the last open, so re-measure before fitBounds
+    routeMap.invalidateSize();
 
     // Clear previous layers while keeping the base tile layer
     routeMap.eachLayer(layer => {
@@ -1032,8 +1010,8 @@ async function verifyAndGetAccess(turnstileToken) {
 
         const data = await response.json();
 
-        if (data.success) {
-            localStorage.setItem('accessToken', data.jwt);
+        if (data.access_token) {
+            localStorage.setItem('accessToken', data.access_token);
             return true;
         } else {
             console.error(data.message);
@@ -1052,12 +1030,10 @@ function showBlocked() {
     document.getElementById('container').style.display = 'none';
 }
 
-window.addEventListener('load', function () {
+window.addEventListener('load', async function () {
     const token = localStorage.getItem('accessToken');
-    if (token) {
-        if (validateToken(token) === true) {
-            return;
-        }
+    if (token && await validateToken(token)) {
+        return;
     }
 
     turnstile.render("#turnstile-hidden", {
