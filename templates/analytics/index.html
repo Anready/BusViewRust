@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Analytics | BusView</title>
+    <link id="favicon" rel="icon" href="/static/favicon-light.ico" type="image/x-icon">
+    <script src="/static/js/theme.js"></script>
+    <style>
+        :root {
+            color-scheme: light;
+            --page: #f9f9f7;
+            --surface: #fcfcfb;
+            --surface-2: #f2f1ed;
+            --text: #0b0b0b;
+            --text-2: #52514e;
+            --muted: #898781;
+            --grid: #e1e0d9;
+            --axis: #c3c2b7;
+            --border: rgba(11, 11, 11, 0.10);
+            --s1: #2a78d6;
+            --s2: #eb6834;
+            --s3: #1baf7a;
+            --good: #006300;
+            --bad: #c42f2f;
+            --seq-0: #ecebe6;
+            --seq-1: #cde2fb;
+            --seq-2: #9ec5f4;
+            --seq-3: #6da7ec;
+            --seq-4: #3987e5;
+            --seq-5: #256abf;
+            --seq-6: #184f95;
+            --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                color-scheme: dark;
+                --page: #0d0d0d;
+                --surface: #1a1a19;
+                --surface-2: #232321;
+                --text: #f0efec;
+                --text-2: #c3c2b7;
+                --muted: #898781;
+                --grid: #2c2c2a;
+                --axis: #383835;
+                --border: rgba(255, 255, 255, 0.10);
+                --s1: #3987e5;
+                --s2: #d95926;
+                --s3: #199e70;
+                --good: #0ca30c;
+                --bad: #e66767;
+                --seq-0: #242422;
+                --seq-1: #0d366b;
+                --seq-2: #184f95;
+                --seq-3: #256abf;
+                --seq-4: #3987e5;
+                --seq-5: #6da7ec;
+                --seq-6: #9ec5f4;
+                --shadow: none;
+            }
+        }
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --page: #0d0d0d;
+            --surface: #1a1a19;
+            --surface-2: #232321;
+            --text: #f0efec;
+            --text-2: #c3c2b7;
+            --muted: #898781;
+            --grid: #2c2c2a;
+            --axis: #383835;
+            --border: rgba(255, 255, 255, 0.10);
+            --s1: #3987e5;
+            --s2: #d95926;
+            --s3: #199e70;
+            --good: #0ca30c;
+            --bad: #e66767;
+            --seq-0: #242422;
+            --seq-1: #0d366b;
+            --seq-2: #184f95;
+            --seq-3: #256abf;
+            --seq-4: #3987e5;
+            --seq-5: #6da7ec;
+            --seq-6: #9ec5f4;
+            --shadow: none;
+        }
+
+        * { box-sizing: border-box; }
+        html, body { margin: 0; }
+        body {
+            background: var(--page);
+            color: var(--text);
+            font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        button, input, select { font: inherit; color: inherit; }
+        [hidden] { display: none !important; }
+
+        /* ---------- Login ---------- */
+        .login {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 16px;
+        }
+        .login form {
+            width: 100%;
+            max-width: 360px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px 24px;
+            box-shadow: var(--shadow);
+        }
+        .login h1 { margin: 0 0 4px; font-size: 20px; font-weight: 650; }
+        .login p { margin: 0 0 20px; color: var(--text-2); }
+        .login input {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid var(--axis);
+            border-radius: 10px;
+            background: var(--page);
+            outline: none;
+        }
+        .login input:focus { border-color: var(--s1); box-shadow: 0 0 0 3px color-mix(in srgb, var(--s1) 20%, transparent); }
+        .login .error { color: var(--bad); min-height: 20px; margin: 8px 0 4px; font-size: 13px; }
+        .btn-primary {
+            width: 100%;
+            padding: 11px 12px;
+            border: 0;
+            border-radius: 10px;
+            background: var(--s1);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-primary:disabled { opacity: .6; cursor: default; }
+
+        /* ---------- Layout ---------- */
+        .app { max-width: 1280px; margin: 0 auto; padding: 16px 16px 48px; }
+        header.top {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        header.top h1 { font-size: 20px; font-weight: 650; margin: 0; margin-right: auto; display: flex; align-items: center; gap: 10px; }
+        header.top h1 a { color: inherit; text-decoration: none; }
+        .live {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 13px; font-weight: 500; color: var(--text-2);
+            background: var(--surface); border: 1px solid var(--border);
+            padding: 3px 10px; border-radius: 999px;
+        }
+        .live::before {
+            content: ""; width: 8px; height: 8px; border-radius: 50%;
+            background: #0ca30c; box-shadow: 0 0 0 0 rgba(12, 163, 12, .5);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 70% { box-shadow: 0 0 0 6px rgba(12, 163, 12, 0); } 100% { box-shadow: 0 0 0 0 rgba(12, 163, 12, 0); } }
+        .ghost {
+            border: 1px solid var(--border);
+            background: var(--surface);
+            border-radius: 8px;
+            padding: 6px 12px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .ghost:hover { background: var(--surface-2); }
+        .updated { color: var(--muted); font-size: 12px; }
+
+        .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+        .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 3px; flex-wrap: wrap; }
+        .seg button {
+            border: 0; background: transparent; padding: 5px 11px; border-radius: 7px; cursor: pointer; color: var(--text-2);
+        }
+        .seg button:hover { background: var(--surface-2); }
+        .seg button.active { background: var(--s1); color: #fff; font-weight: 600; }
+        .custom { display: inline-flex; gap: 6px; align-items: center; }
+        .custom input {
+            border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 5px 8px;
+        }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+        .chip {
+            display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+            background: color-mix(in srgb, var(--s1) 12%, var(--surface));
+            border: 1px solid color-mix(in srgb, var(--s1) 35%, transparent);
+            border-radius: 999px; padding: 3px 4px 3px 11px; font-size: 13px;
+        }
+        .chip b { font-weight: 600; }
+        .chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .chip button {
+            border: 0; background: transparent; width: 22px; height: 22px; border-radius: 50%; cursor: pointer; line-height: 1; font-size: 15px;
+        }
+        .chip button:hover { background: color-mix(in srgb, var(--s1) 20%, transparent); }
+
+        main.loading .card, main.loading .kpis { opacity: .55; transition: opacity .2s; }
+
+        .kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .kpi {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px;
+            box-shadow: var(--shadow);
+        }
+        .kpi .label { color: var(--text-2); font-size: 13px; }
+        .kpi .value { font-size: 26px; font-weight: 650; margin: 2px 0 2px; letter-spacing: -0.01em; }
+        .kpi .delta { font-size: 12px; color: var(--muted); }
+        .kpi .delta.good { color: var(--good); }
+        .kpi .delta.bad { color: var(--bad); }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 12px; }
+        .card {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px;
+            box-shadow: var(--shadow); min-width: 0;
+        }
+        .card.wide { grid-column: 1 / -1; }
+        .card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+        .card-head h2 { font-size: 15px; font-weight: 650; margin: 0; margin-right: auto; }
+        .card .note { color: var(--muted); font-size: 12px; margin: -4px 0 8px; }
+        .tabs { display: inline-flex; gap: 2px; flex-wrap: wrap; }
+        .tabs button {
+            border: 0; background: transparent; padding: 3px 9px; border-radius: 6px; cursor: pointer; color: var(--text-2); font-size: 13px;
+        }
+        .tabs button:hover { background: var(--surface-2); }
+        .tabs button.active { background: var(--surface-2); color: var(--text); font-weight: 600; }
+
+        .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--text-2); }
+        .legend i { display: inline-block; width: 14px; height: 2px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+
+        /* ---------- Tables ---------- */
+        .table-wrap { overflow-x: auto; max-height: 420px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+        th {
+            text-align: right; font-weight: 500; color: var(--muted); font-size: 12px; padding: 4px 8px 6px;
+            position: sticky; top: 0; background: var(--surface); z-index: 1; white-space: nowrap;
+        }
+        th:first-child, td:first-child { text-align: left; }
+        td { padding: 6px 8px; text-align: right; white-space: nowrap; border-top: 1px solid var(--grid); }
+        td.key { position: relative; max-width: 0; width: 100%; overflow: hidden; text-overflow: ellipsis; }
+        td.key .bar {
+            position: absolute; inset: 3px auto 3px 0; background: var(--s1); opacity: .13; border-radius: 0 4px 4px 0; pointer-events: none;
+        }
+        td.key .txt { position: relative; }
+        tr.clickable { cursor: pointer; }
+        tr.clickable:hover td { background: var(--surface-2); }
+        .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+        .dim { color: var(--muted); }
+        .props { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+
+        /* ---------- Charts ---------- */
+        .chart { position: relative; width: 100%; }
+        .chart svg { display: block; width: 100%; overflow: visible; }
+        .chart text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+        .tooltip {
+            position: absolute; pointer-events: none; z-index: 5;
+            background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+            padding: 8px 10px; font-size: 12px; box-shadow: 0 6px 24px rgba(0, 0, 0, .14);
+            min-width: 130px; white-space: nowrap;
+        }
+        .tooltip .t-title { color: var(--text-2); margin-bottom: 4px; }
+        .tooltip .t-row { display: flex; align-items: center; gap: 8px; }
+        .tooltip .t-row i { width: 12px; height: 2px; border-radius: 2px; }
+        .tooltip .t-row b { font-weight: 650; font-variant-numeric: tabular-nums; }
+        .tooltip .t-row span { color: var(--text-2); }
+
+        .heatmap { display: grid; grid-template-columns: 26px repeat(24, minmax(10px, 1fr)); gap: 2px; min-width: 330px; }
+        .heatmap div { aspect-ratio: 1; border-radius: 3px; }
+        .heatmap .lbl { aspect-ratio: auto; font-size: 11px; color: var(--muted); display: flex; align-items: center; }
+        .heatmap .hl { aspect-ratio: auto; font-size: 10px; color: var(--muted); text-align: center; }
+        .heatmap .cell:hover { outline: 2px solid var(--text); outline-offset: -1px; }
+        .scale { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); margin-top: 8px; }
+        .scale i { width: 16px; height: 10px; border-radius: 2px; }
+
+        .rt-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+        .rt-head .big { font-size: 40px; font-weight: 650; line-height: 1; }
+
+        /* ---------- Modal ---------- */
+        .modal-back {
+            position: fixed; inset: 0; background: rgba(0, 0, 0, .45); display: grid; place-items: center; padding: 16px; z-index: 20;
+        }
+        .modal {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 760px;
+            max-height: 85vh; display: flex; flex-direction: column; padding: 16px;
+        }
+        .modal .table-wrap { max-height: none; flex: 1; }
+        .modal td { white-space: normal; }
+
+        @media (max-width: 600px) {
+            .kpi .value { font-size: 22px; }
+            .seg button { padding: 5px 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="login" id="login" hidden>
+    <form id="loginForm" autocomplete="on">
+        <h1>BusView Analytics</h1>
+        <p>Введите пароль, чтобы открыть статистику</p>
+        <input type="text" name="username" value="admin" autocomplete="username" hidden>
+        <input id="password" type="password" name="password" placeholder="Пароль" autocomplete="current-password" required autofocus>
+        <div class="error" id="loginError" role="alert"></div>
+        <button class="btn-primary" id="loginBtn" type="submit">Войти</button>
+    </form>
+</div>
+
+<div class="app" id="app" hidden>
+    <header class="top">
+        <h1><a href="/analytics">BusView Analytics</a> <span class="live" id="livePill" title="Посетители за последние 5 минут">— онлайн</span></h1>
+        <span class="updated" id="updated"></span>
+        <button class="ghost" id="refreshBtn" type="button">Обновить</button>
+        <button class="ghost" id="trackBtn" type="button" title="Не учитывать визиты с этого браузера"></button>
+        <button class="ghost" id="logoutBtn" type="button">Выйти</button>
+    </header>
+
+    <div class="filters">
+        <div class="seg" id="presets">
+            <button type="button" data-preset="today">Сегодня</button>
+            <button type="button" data-preset="yesterday">Вчера</button>
+            <button type="button" data-preset="7d">7 дней</button>
+            <button type="button" data-preset="30d">30 дней</button>
+            <button type="button" data-preset="90d">90 дней</button>
+            <button type="button" data-preset="all">Всё время</button>
+        </div>
+        <form class="custom" id="customForm">
+            <input type="date" id="customFrom" aria-label="С">
+            <span class="dim">—</span>
+            <input type="date" id="customTo" aria-label="По">
+            <button class="ghost" type="submit">Применить</button>
+        </form>
+    </div>
+    <div class="chips" id="chips"></div>
+
+    <main id="main">
+        <section class="kpis" id="kpis"></section>
+        <div class="grid" id="grid"></div>
+    </main>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    const API = '/api/admin';
+    const DAY = 86400000;
+    const fmtInt = new Intl.NumberFormat('ru-RU');
+    const fmtPct = new Intl.NumberFormat('ru-RU', { style: 'percent', maximumFractionDigits: 1 });
+    const regionNames = (() => { try { return new Intl.DisplayNames(['ru'], { type: 'region' }); } catch (e) { return null; } })();
+
+    const DIMENSIONS = {
+        path: 'Страница', referrer: 'Источник', utm_source: 'UTM source', utm_medium: 'UTM medium',
+        utm_campaign: 'UTM campaign', country: 'Страна', timezone: 'Часовой пояс', browser: 'Браузер',
+        os: 'ОС', device: 'Устройство', screen: 'Экран', lang: 'Язык', theme: 'Тема', app_mode: 'Режим',
+    };
+    const DEVICE_NAMES = { mobile: 'Телефон', tablet: 'Планшет', desktop: 'Компьютер' };
+    const MODE_NAMES = { app: 'Установленное приложение', browser: 'Браузер' };
+    const THEME_NAMES = { light: 'Светлая', dark: 'Тёмная' };
+    const WEEKDAYS = [['Пн', 1], ['Вт', 2], ['Ср', 3], ['Чт', 4], ['Пт', 5], ['Сб', 6], ['Вс', 0]];
+
+    const state = {
+        preset: '7d',
+        customFrom: null,
+        customTo: null,
+        filters: {},
+        tabs: {},
+        stats: null,
+        realtime: null,
+    };
+
+    // ---------- DOM helpers (all data goes through textContent) ----------
+    function el(tag, props, ...children) {
+        const node = document.createElement(tag);
+        for (const [key, value] of Object.entries(props || {})) {
+            if (value === undefined || value === null || value === false) continue;
+            if (key === 'class') node.className = value;
+            else if (key === 'style') node.style.cssText = value;
+            else if (key.startsWith('on')) node.addEventListener(key.slice(2), value);
+            else node.setAttribute(key, value);
+        }
+        for (const child of children.flat()) {
+            if (child === null || child === undefined || child === false) continue;
+            node.append(child instanceof Node ? child : document.createTextNode(String(child)));
+        }
+        return node;
+    }
+
+    function svg(tag, attrs) {
+        const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+        for (const [key, value] of Object.entries(attrs || {})) node.setAttribute(key, value);
+        return node;
+    }
+
+    const $ = id => document.getElementById(id);
+
+    // ---------- Formatting ----------
+    function compact(n) {
+        if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace('.0', '') + 'M';
+        if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(n >= 1e4 ? 0 : 1).replace('.0', '') + 'K';
+        return String(Math.round(n));
+    }
+
+    function duration(ms) {
+        const s = Math.round((ms || 0) / 1000);
+        if (s < 60) return s + ' с';
+        const m = Math.floor(s / 60);
+        if (m < 60) return m + ' мин ' + (s % 60) + ' с';
+        return Math.floor(m / 60) + ' ч ' + (m % 60) + ' мин';
+    }
+
+    function flag(code) {
+        if (!/^[A-Z]{2}$/.test(code)) return '';
+        return String.fromCodePoint(...[...code].map(c => 127397 + c.charCodeAt(0))) + ' ';
+    }
+
+    function label(dim, key) {
+        if (key === '' || key === null || key === undefined) {
+            return dim === 'referrer' ? 'Прямые заходы' : '(не указано)';
+        }
+        switch (dim) {
+            case 'country': return flag(key) + (regionNames ? (regionNames.of(key) || key) : key);
+            case 'device': return DEVICE_NAMES[key] || key;
+            case 'app_mode': return MODE_NAMES[key] || key;
+            case 'theme': return THEME_NAMES[key] || key;
+            case 'lang': {
+                try {
+                    const name = new Intl.DisplayNames(['ru'], { type: 'language' }).of(key);
+                    return name && name !== key ? name + ' (' + key + ')' : key;
+                } catch (e) { return key; }
+            }
+            default: return key;
+        }
+    }
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    function fmtTime(t, bucket) {
+        const d = new Date(t);
+        if (bucket && bucket < DAY) return pad(d.getHours()) + ':00';
+        return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    }
+
+    function fmtBucketTitle(t, bucket) {
+        const d = new Date(t);
+        const date = d.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' });
+        return bucket < DAY ? date + ', ' + pad(d.getHours()) + ':00–' + pad((d.getHours() + 1) % 24) + ':00' : date;
+    }
+
+    function fmtClock(t) {
+        const d = new Date(t);
+        const today = new Date();
+        const time = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+        return d.toDateString() === today.toDateString() ? time : d.toLocaleDateString('ru-RU') + ' ' + time;
+    }
+
+    // ---------- API ----------
+    async function api(path, options) {
+        const response = await fetch(API + path, Object.assign({ credentials: 'same-origin', cache: 'no-store' }, options));
+        if (response.status === 401) {
+            showLogin();
+            throw new Error('unauthorized');
+        }
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.status === 204 ? null : response.json();
+    }
+
+    // ---------- Range & URL state ----------
+    function startOfDay(t) {
+        const d = new Date(t);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime();
+    }
+
+    function range() {
+        const now = Date.now();
+        const today = startOfDay(now);
+        switch (state.preset) {
+            case 'today': return [today, now];
+            case 'yesterday': return [startOfDay(today - 1), today];
+            case '30d': return [startOfDay(now - 29 * DAY), now];
+            case '90d': return [startOfDay(now - 89 * DAY), now];
+            case 'all': return [0, now];
+            case 'custom': return [state.customFrom, state.customTo];
+            default: return [startOfDay(now - 6 * DAY), now];
+        }
+    }
+
+    function isLive() {
+        return state.preset !== 'yesterday' && state.preset !== 'custom';
+    }
+
+    function queryString() {
+        const [from, to] = range();
+        const params = new URLSearchParams({ from, to, tz: -new Date().getTimezoneOffset() });
+        for (const [dim, value] of Object.entries(state.filters)) params.set('f_' + dim, value);
+        return params.toString();
+    }
+
+    function saveHash() {
+        const params = new URLSearchParams({ p: state.preset });
+        if (state.preset === 'custom') {
+            params.set('from', state.customFrom);
+            params.set('to', state.customTo);
+        }
+        for (const [dim, value] of Object.entries(state.filters)) params.set('f_' + dim, value);
+        history.replaceState(null, '', '#' + params.toString());
+    }
+
+    function loadHash() {
+        const params = new URLSearchParams(location.hash.slice(1));
+        const preset = params.get('p');
+        if (preset) state.preset = preset;
+        if (preset === 'custom') {
+            state.customFrom = Number(params.get('from'));
+            state.customTo = Number(params.get('to'));
+            if (!state.customFrom || !state.customTo) state.preset = '7d';
+        }
+        state.filters = {};
+        for (const dim of Object.keys(DIMENSIONS)) {
+            if (params.has('f_' + dim)) state.filters[dim] = params.get('f_' + dim);
+        }
+    }
+
+    function setFilter(dim, value) {
+        state.filters[dim] = value;
+        saveHash();
+        loadStats();
+    }
+
+    function removeFilter(dim) {
+        delete state.filters[dim];
+        saveHash();
+        loadStats();
+    }
+
+    // ---------- Login ----------
+    function showLogin() {
+        $('app').hidden = true;
+        $('login').hidden = false;
+        $('password').focus();
+    }
+
+    async function showApp() {
+        $('login').hidden = true;
+        $('app').hidden = false;
+        loadHash();
+        renderControls();
+        await Promise.all([loadStats(), loadRealtime()]);
+    }
+
+    $('loginForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const button = $('loginBtn');
+        const error = $('loginError');
+        button.disabled = true;
+        error.textContent = '';
+        try {
+            const response = await fetch(API + '/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ password: $('password').value }),
+            });
+            if (response.ok) {
+                $('password').value = '';
+                await showApp();
+                return;
+            }
+            error.textContent = {
+                401: 'Неверный пароль',
+                429: 'Слишком много попыток. Попробуйте через 15 минут.',
+                503: 'Пароль не настроен на сервере (ANALYTICS_PASSWORD_HASH).',
+            }[response.status] || 'Ошибка сервера (' + response.status + ')';
+        } catch (err) {
+            error.textContent = 'Нет соединения с сервером';
+        } finally {
+            button.disabled = false;
+        }
+    });
+
+    $('logoutBtn').addEventListener('click', async function () {
+        await fetch(API + '/logout', { method: 'POST', credentials: 'same-origin' });
+        showLogin();
+    });
+
+    // ---------- Controls ----------
+    function toDateInput(t) {
+        const d = new Date(t);
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    }
+
+    function renderControls() {
+        for (const button of $('presets').querySelectorAll('button')) {
+            button.classList.toggle('active', button.dataset.preset === state.preset);
+        }
+        const [from, to] = range();
+        $('customFrom').value = toDateInput(from || Date.now());
+        $('customTo').value = toDateInput(Math.max(from, to - 1));
+
+        const chips = $('chips');
+        chips.replaceChildren(...Object.entries(state.filters).map(([dim, value]) =>
+            el('span', { class: 'chip' },
+                el('span', null, el('b', null, DIMENSIONS[dim] + ': '), label(dim, value)),
+                el('button', { type: 'button', 'aria-label': 'Убрать фильтр', title: 'Убрать фильтр', onclick: () => removeFilter(dim) }, '×'))));
+
+        let noTrack = false;
+        try { noTrack = localStorage.getItem('bv_noTrack') === '1'; } catch (e) { /* storage blocked */ }
+        $('trackBtn').textContent = noTrack ? 'Этот браузер не учитывается' : 'Не учитывать этот браузер';
+    }
+
+    $('presets').addEventListener('click', function (e) {
+        const preset = e.target.dataset && e.target.dataset.preset;
+        if (!preset) return;
+        state.preset = preset;
+        saveHash();
+        loadStats();
+    });
+
+    $('customForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const from = $('customFrom').value;
+        const to = $('customTo').value;
+        if (!from || !to) return;
+        const fromTs = new Date(from + 'T00:00').getTime();
+        const toTs = new Date(to + 'T00:00').getTime() + DAY;
+        if (toTs <= fromTs) return;
+        state.preset = 'custom';
+        state.customFrom = fromTs;
+        state.customTo = toTs;
+        saveHash();
+        loadStats();
+    });
+
+    $('refreshBtn').addEventListener('click', () => { loadStats(); loadRealtime(); });
+
+    $('trackBtn').addEventListener('click', function () {
+        try {
+            if (localStorage.getItem('bv_noTrack') === '1') localStorage.removeItem('bv_noTrack');
+            else localStorage.setItem('bv_noTrack', '1');
+        } catch (e) { /* storage blocked */ }
+        renderControls();
+    });
+
+    window.addEventListener('hashchange', () => { loadHash(); loadStats(); });
+
+    // ---------- Loading ----------
+    let statsRequest = 0;
+
+    async function loadStats() {
+        renderControls();
+        const id = ++statsRequest;
+        $('main').classList.add('loading');
+        try {
+            const stats = await api('/stats?' + queryString());
+            if (id !== statsRequest) return;
+            state.stats = stats;
+            render();
+            $('updated').textContent = 'Обновлено ' + fmtClock(Date.now()).slice(-8, -3);
+        } catch (e) {
+            if (e.message !== 'unauthorized') $('updated').textContent = 'Ошибка загрузки: ' + e.message;
+        } finally {
+            if (id === statsRequest) $('main').classList.remove('loading');
+        }
+    }
+
+    async function loadRealtime() {
+        try {
+            state.realtime = await api('/realtime');
+            $('livePill').textContent = fmtInt.format(state.realtime.active) + ' онлайн';
+            const card = $('realtimeCard');
+            if (card) card.replaceWith(realtimeCard());
+        } catch (e) { /* shown on next stats load */ }
+    }
+
+    setInterval(() => {
+        if (document.visibilityState !== 'visible' || $('app').hidden) return;
+        loadRealtime();
+    }, 15000);
+
+    setInterval(() => {
+        if (document.visibilityState !== 'visible' || $('app').hidden || !isLive()) return;
+        loadStats();
+    }, 60000);
+
+    // ---------- Rendering ----------
+    function render() {
+        const s = state.stats;
+        renderKpis(s);
+
+        const grid = $('grid');
+        grid.replaceChildren(
+            trendCard(s),
+            realtimeCard(),
+            tabbedCard('pages', 'Страницы', [
+                { id: 'all', label: 'Все', render: () => dimensionTable('path', s.pages, { time: true }) },
+                { id: 'entry', label: 'Входные', render: () => entryTable(s.entry_pages) },
+            ]),
+            tabbedCard('sources', 'Источники трафика', [
+                { id: 'ref', label: 'Сайты', render: () => dimensionTable('referrer', s.referrers) },
+                { id: 'utm', label: 'UTM source', render: () => dimensionTable('utm_source', s.utm_source) },
+                { id: 'camp', label: 'UTM campaign', render: () => dimensionTable('utm_campaign', s.utm_campaign) },
+            ]),
+            tabbedCard('geo', 'География', [
+                { id: 'tz', label: 'Часовой пояс', render: () => dimensionTable('timezone', s.timezone) },
+                { id: 'country', label: 'Страна', render: () => dimensionTable('country', s.country) },
+                { id: 'lang', label: 'Язык', render: () => dimensionTable('lang', s.lang) },
+            ]),
+            tabbedCard('tech', 'Устройства', [
+                { id: 'device', label: 'Тип', render: () => dimensionTable('device', s.device) },
+                { id: 'os', label: 'ОС', render: () => dimensionTable('os', s.os) },
+                { id: 'browser', label: 'Браузер', render: () => dimensionTable('browser', s.browser) },
+                { id: 'screen', label: 'Экран', render: () => dimensionTable('screen', s.screen) },
+                { id: 'mode', label: 'Режим', render: () => dimensionTable('app_mode', s.app_mode) },
+                { id: 'theme', label: 'Тема', render: () => dimensionTable('theme', s.theme) },
+            ]),
+            heatmapCard(s),
+            eventsCard(s),
+            apiCard(s),
+        );
+    }
+
+    function delta(current, previous, upIsGood) {
+        if (!previous || !isFinite(current)) return el('div', { class: 'delta', title: 'За предыдущий такой же период данных нет' }, state.preset === 'all' ? ' ' : 'не с чем сравнить');
+        const change = (current - previous) / previous;
+        if (Math.abs(change) < 0.0005) return el('div', { class: 'delta' }, 'без изменений');
+        const up = change > 0;
+        const good = up === upIsGood;
+        return el('div', { class: 'delta ' + (good ? 'good' : 'bad') },
+            (up ? '▲ ' : '▼ ') + fmtPct.format(Math.abs(change)), el('span', { class: 'dim' }, ' к прошлому периоду'));
+    }
+
+    function renderKpis(s) {
+        const k = s.kpi;
+        const p = s.prev;
+        const bounce = k.sessions ? k.bounces / k.sessions : 0;
+        const prevBounce = p.sessions ? p.bounces / p.sessions : 0;
+        const depth = k.sessions ? k.pageviews / k.sessions : 0;
+        const prevDepth = p.sessions ? p.pageviews / p.sessions : 0;
+
+        const tile = (title, value, deltaNode, hint, extra) =>
+            el('div', { class: 'kpi', title: hint }, el('div', { class: 'label' }, title), el('div', { class: 'value' }, value), deltaNode,
+                extra ? el('div', { class: 'delta' }, extra) : null);
+
+        $('kpis').replaceChildren(
+            tile('Посетители', fmtInt.format(k.visitors), delta(k.visitors, p.visitors, true), 'Уникальные браузеры'),
+            tile('Посетители по IP', k.ip_visitors ? fmtInt.format(k.ip_visitors) : '—', delta(k.ip_visitors, p.ip_visitors, true),
+                'Уникальные IP + браузер за каждые сутки (UTC), сложенные за период. Не считает дважды очистку данных и инкогнито в течение дня, но склеивает одинаковые телефоны в одной сети.',
+                k.ip_visitors ? 'по ID за те же дни: ' + fmtInt.format(k.id_visitors_daily) : 'нет IP от прокси'),
+            tile('Новые посетители', fmtInt.format(k.new_visitors), delta(k.new_visitors, p.new_visitors, true), 'Впервые открыли сайт за период'),
+            tile('Визиты', fmtInt.format(k.sessions), delta(k.sessions, p.sessions, true), 'Новый визит начинается после 30 минут бездействия'),
+            tile('Просмотры', fmtInt.format(k.pageviews), delta(k.pageviews, p.pageviews, true)),
+            tile('Страниц за визит', depth.toFixed(2).replace('.', ','), delta(depth, prevDepth, true)),
+            tile('Отказы', fmtPct.format(bounce), delta(bounce, prevBounce, false), 'Визиты с одной страницей'),
+            tile('Время визита', duration(k.avg_session_ms), delta(k.avg_session_ms, p.avg_session_ms, true), 'Среднее активное время (вкладка на экране)'),
+        );
+    }
+
+    function card(title, options, ...body) {
+        options = options || {};
+        return el('section', { class: 'card' + (options.wide ? ' wide' : ''), id: options.id },
+            el('div', { class: 'card-head' }, el('h2', null, title), options.head || null),
+            options.note ? el('div', { class: 'note' }, options.note) : null,
+            ...body);
+    }
+
+    function tabbedCard(key, title, tabs, options) {
+        const active = tabs.find(t => t.id === state.tabs[key]) || tabs[0];
+        const body = el('div', null, active.render());
+        const tabBar = el('div', { class: 'tabs' }, tabs.map(tab => el('button', {
+            type: 'button',
+            class: tab === active ? 'active' : '',
+            onclick: function () {
+                state.tabs[key] = tab.id;
+                for (const b of tabBar.children) b.classList.toggle('active', b === this);
+                body.replaceChildren(tab.render());
+            },
+        }, tab.label)));
+        return card(title, Object.assign({ head: tabBar }, options), body);
+    }
+
+    function emptyState(text) {
+        return el('div', { class: 'empty' }, text || 'Нет данных за этот период');
+    }
+
+    function dimensionTable(dim, rows, options) {
+        options = options || {};
+        if (!rows || !rows.length) return emptyState();
+        const max = Math.max(...rows.map(r => r.visitors), 1);
+        const filtered = dim in state.filters;
+        return el('div', { class: 'table-wrap' }, el('table', null,
+            el('thead', null, el('tr', null,
+                el('th', null, DIMENSIONS[dim]),
+                el('th', null, 'Посетители'),
+                el('th', null, 'Просмотры'),
+                options.time ? el('th', null, 'Ср. время') : null)),
+            el('tbody', null, rows.map(row => el('tr', {
+                class: filtered ? '' : 'clickable',
+                title: filtered ? null : 'Показать только «' + label(dim, row.key) + '»',
+                onclick: filtered ? null : () => setFilter(dim, row.key),
+            },
+                el('td', { class: 'key' },
+                    el('div', { class: 'bar', style: 'width:' + (row.visitors / max * 100).toFixed(1) + '%' }),
+                    el('span', { class: 'txt' + (row.key ? '' : ' dim') }, label(dim, row.key))),
+                el('td', null, fmtInt.format(row.visitors)),
+                el('td', null, fmtInt.format(row.pageviews)),
+                options.time ? el('td', { class: row.avg_ms ? '' : 'dim' }, row.avg_ms ? duration(row.avg_ms) : '—') : null)))));
+    }
+
+    function entryTable(rows) {
+        if (!rows || !rows.length) return emptyState();
+        const max = Math.max(...rows.map(r => r.sessions), 1);
+        return el('div', { class: 'table-wrap' }, el('table', null,
+            el('thead', null, el('tr', null, el('th', null, 'Входная страница'), el('th', null, 'Визиты'), el('th', null, 'Отказы'))),
+            el('tbody', null, rows.map(row => el('tr', { class: 'clickable', onclick: () => setFilter('path', row.key) },
+                el('td', { class: 'key' },
+                    el('div', { class: 'bar', style: 'width:' + (row.sessions / max * 100).toFixed(1) + '%' }),
+                    el('span', { class: 'txt' }, row.key)),
+                el('td', null, fmtInt.format(row.sessions)),
+                el('td', null, fmtPct.format(row.sessions ? row.bounces / row.sessions : 0)))))));
+    }
+
+    // ---------- Charts ----------
+    function niceScale(max, ticks) {
+        if (max <= 0) return { max: ticks, step: 1 };
+        const raw = max / ticks;
+        const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+        const step = Math.max(1, [1, 2, 2.5, 5, 10].find(m => m * mag >= raw) * mag);
+        return { max: step * Math.ceil(max / step), step };
+    }
+
+    /** Fills empty buckets with zeros so the time axis is continuous */
+    function fillSeries(points, from, to, bucket, keys) {
+        const off = -new Date().getTimezoneOffset() * 60000;
+        const align = t => Math.floor((t + off) / bucket) * bucket - off;
+        const byT = new Map(points.map(p => [p.t, p]));
+        let start = align(from);
+        if (state.preset === 'all' && points.length) start = points[0].t;
+        const end = Math.min(to, Date.now());
+        const out = [];
+        for (let t = start; t < end && out.length < 2000; t += bucket) {
+            const p = byT.get(t);
+            const row = { t };
+            for (const k of keys) row[k] = p ? p[k] : 0;
+            out.push(row);
+        }
+        return out.length ? out : [Object.fromEntries([['t', start], ...keys.map(k => [k, 0])])];
+    }
+
+    function tooltipFor(container) {
+        const tip = el('div', { class: 'tooltip', hidden: true });
+        container.append(tip);
+        return {
+            show(x, y, title, rows) {
+                tip.replaceChildren(el('div', { class: 't-title' }, title), ...rows.map(r =>
+                    el('div', { class: 't-row' }, r.color ? el('i', { style: 'background:' + r.color }) : null, el('b', null, r.value), el('span', null, r.name))));
+                tip.hidden = false;
+                const cw = container.clientWidth;
+                const tw = tip.offsetWidth;
+                let left = x + 14;
+                if (left + tw > cw) left = Math.max(0, x - tw - 14);
+                tip.style.left = left + 'px';
+                tip.style.top = Math.max(0, y - tip.offsetHeight / 2) + 'px';
+            },
+            hide() { tip.hidden = true; },
+        };
+    }
+
+    function axisLabels(svgNode, xs, data, bucket, height, margin, width) {
+        const count = Math.max(2, Math.floor((width - margin.left - margin.right) / 80));
+        const every = Math.max(1, Math.ceil(data.length / count));
+        data.forEach((d, i) => {
+            if (i % every !== 0) return;
+            const text = svg('text', { x: xs(i), y: height - 6, 'text-anchor': 'middle' });
+            text.textContent = fmtTime(d.t, bucket);
+            svgNode.append(text);
+        });
+    }
+
+    function yGrid(svgNode, scale, ys, margin, width) {
+        for (let v = 0; v <= scale.max; v += scale.step) {
+            const y = ys(v);
+            svgNode.append(svg('line', { x1: margin.left, x2: width - margin.right, y1: y, y2: y, stroke: v === 0 ? 'var(--axis)' : 'var(--grid)', 'stroke-width': 1 }));
+            const text = svg('text', { x: margin.left - 8, y: y + 4, 'text-anchor': 'end' });
+            text.textContent = compact(v);
+            svgNode.append(text);
+        }
+    }
+
+    /** Multi-series line chart with crosshair tooltip. series: [{key, name, color}] */
+    function lineChart(data, series, bucket, height) {
+        const container = el('div', { class: 'chart' });
+        const draw = () => {
+            const width = container.clientWidth || 600;
+            const margin = { top: 10, right: 12, bottom: 24, left: 40 };
+            const max = Math.max(...data.flatMap(d => series.map(s => d[s.key])), 0);
+            const scale = niceScale(max, 4);
+            const innerW = width - margin.left - margin.right;
+            const xs = i => margin.left + (data.length === 1 ? innerW / 2 : i / (data.length - 1) * innerW);
+            const ys = v => margin.top + (1 - v / scale.max) * (height - margin.top - margin.bottom);
+
+            const root = svg('svg', { viewBox: `0 0 ${width} ${height}`, height, role: 'img' });
+            yGrid(root, scale, ys, margin, width);
+            axisLabels(root, xs, data, bucket, height, margin, width);
+
+            series.forEach((s, si) => {
+                const points = data.map((d, i) => xs(i).toFixed(1) + ',' + ys(d[s.key]).toFixed(1));
+                if (si === 0 && data.length > 1) {
+                    root.append(svg('polygon', {
+                        points: `${xs(0)},${ys(0)} ${points.join(' ')} ${xs(data.length - 1)},${ys(0)}`,
+                        fill: s.color, opacity: 0.1,
+                    }));
+                }
+                root.append(svg('polyline', { points: points.join(' '), fill: 'none', stroke: s.color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+                if (data.length === 1) root.append(svg('circle', { cx: xs(0), cy: ys(data[0][s.key]), r: 4, fill: s.color }));
+            });
+
+            const cross = svg('line', { y1: margin.top, y2: height - margin.bottom, stroke: 'var(--axis)', 'stroke-width': 1, visibility: 'hidden' });
+            const dots = series.map(s => svg('circle', { r: 4, fill: s.color, stroke: 'var(--surface)', 'stroke-width': 2, visibility: 'hidden' }));
+            root.append(cross, ...dots);
+
+            const overlay = svg('rect', { x: margin.left, y: 0, width: innerW, height, fill: 'transparent' });
+            root.append(overlay);
+            container.replaceChildren(root);
+            const tip = tooltipFor(container);
+
+            const move = e => {
+                const rect = root.getBoundingClientRect();
+                const x = (e.clientX - rect.left) * (width / rect.width);
+                const i = data.length === 1 ? 0 : Math.round(Math.min(Math.max((x - margin.left) / innerW, 0), 1) * (data.length - 1));
+                const d = data[i];
+                cross.setAttribute('x1', xs(i));
+                cross.setAttribute('x2', xs(i));
+                cross.setAttribute('visibility', 'visible');
+                series.forEach((s, si) => {
+                    dots[si].setAttribute('cx', xs(i));
+                    dots[si].setAttribute('cy', ys(d[s.key]));
+                    dots[si].setAttribute('visibility', 'visible');
+                });
+                tip.show(xs(i) * rect.width / width, ys(d[series[0].key]) * rect.height / height,
+                    fmtBucketTitle(d.t, bucket), series.map(s => ({ color: s.color, value: fmtInt.format(d[s.key]), name: s.name })));
+            };
+            const leave = () => {
+                cross.setAttribute('visibility', 'hidden');
+                dots.forEach(dot => dot.setAttribute('visibility', 'hidden'));
+                tip.hide();
+            };
+            overlay.addEventListener('pointermove', move);
+            overlay.addEventListener('pointerleave', leave);
+        };
+        observeWidth(container, draw);
+        return container;
+    }
+
+    /** Single-series column chart. rows: [{t, value, extra?}] */
+    function columnChart(data, bucket, height, name, describe) {
+        const container = el('div', { class: 'chart' });
+        const draw = () => {
+            const width = container.clientWidth || 600;
+            const margin = { top: 10, right: 12, bottom: 24, left: 40 };
+            const scale = niceScale(Math.max(...data.map(d => d.value), 0), 3);
+            const innerW = width - margin.left - margin.right;
+            const slot = innerW / data.length;
+            const barW = Math.max(1, Math.min(24, slot - 2));
+            const xs = i => margin.left + slot * i + slot / 2;
+            const ys = v => margin.top + (1 - v / scale.max) * (height - margin.top - margin.bottom);
+            const base = ys(0);
+
+            const root = svg('svg', { viewBox: `0 0 ${width} ${height}`, height, role: 'img' });
+            yGrid(root, scale, ys, margin, width);
+            if (bucket) axisLabels(root, xs, data, bucket, height, margin, width);
+
+            const bars = data.map((d, i) => {
+                const top = ys(d.value);
+                const h = base - top;
+                const r = Math.min(4, h, barW / 2);
+                const x = xs(i) - barW / 2;
+                const path = h <= 0 ? '' :
+                    `M${x},${base} V${top + r} Q${x},${top} ${x + r},${top} H${x + barW - r} Q${x + barW},${top} ${x + barW},${top + r} V${base} Z`;
+                const bar = svg('path', { d: path, fill: 'var(--s1)' });
+                root.append(bar);
+                return bar;
+            });
+
+            const overlay = svg('rect', { x: margin.left, y: 0, width: innerW, height, fill: 'transparent' });
+            root.append(overlay);
+            container.replaceChildren(root);
+            const tip = tooltipFor(container);
+            let hovered = null;
+            overlay.addEventListener('pointermove', e => {
+                const rect = root.getBoundingClientRect();
+                const x = (e.clientX - rect.left) * (width / rect.width);
+                const i = Math.min(data.length - 1, Math.max(0, Math.floor((x - margin.left) / slot)));
+                if (hovered !== null) bars[hovered].removeAttribute('opacity');
+                hovered = i;
+                bars[i].setAttribute('opacity', 0.75);
+                const d = data[i];
+                tip.show(xs(i) * rect.width / width, ys(d.value) * rect.height / height, describe(d),
+                    [{ color: 'var(--s1)', value: fmtInt.format(d.value), name }].concat(d.extra || []));
+            });
+            overlay.addEventListener('pointerleave', () => {
+                if (hovered !== null) bars[hovered].removeAttribute('opacity');
+                hovered = null;
+                tip.hide();
+            });
+        };
+        observeWidth(container, draw);
+        return container;
+    }
+
+    function observeWidth(container, draw) {
+        let lastWidth = 0;
+        const ro = new ResizeObserver(entries => {
+            const w = Math.round(entries[0].contentRect.width);
+            if (w && w !== lastWidth) {
+                lastWidth = w;
+                draw();
+            }
+        });
+        ro.observe(container);
+    }
+
+    // ---------- Cards ----------
+    function trendCard(s) {
+        const data = fillSeries(s.series, s.from, s.to, s.bucket, ['pageviews', 'visitors', 'sessions', 'ip_visitors']);
+        const series = [
+            { key: 'visitors', name: 'Посетители', color: 'var(--s1)' },
+            { key: 'pageviews', name: 'Просмотры', color: 'var(--s2)' },
+        ];
+        if (s.kpi.ip_visitors) series.push({ key: 'ip_visitors', name: 'Посетители по IP', color: 'var(--s3)' });
+        const legend = el('div', { class: 'legend' }, series.map(x => el('span', null, el('i', { style: 'background:' + x.color }), x.name)));
+        return card(s.bucket < DAY ? 'Посещаемость по часам' : 'Посещаемость по дням', { wide: true, head: legend },
+            lineChart(data, series, s.bucket, 260));
+    }
+
+    function realtimeCard() {
+        const rt = state.realtime;
+        if (!rt) return card('Сейчас на сайте', { id: 'realtimeCard' }, emptyState('Загрузка…'));
+        const now = Date.now();
+        const minutes = rt.minutes.map((value, i) => ({ value, t: now - (30 - i) * 60000 }));
+        const minuteLabel = d => {
+            const ago = Math.round((now - d.t) / 60000);
+            return ago <= 1 ? 'Последняя минута' : ago + ' мин назад';
+        };
+
+        return card('Сейчас на сайте', { id: 'realtimeCard', note: 'Активные за последние 5 минут · обновляется каждые 15 с' },
+            el('div', { class: 'rt-head' }, el('span', { class: 'big' }, fmtInt.format(rt.active)), el('span', { class: 'dim' }, 'посетителей')),
+            el('div', { class: 'dim', style: 'font-size:12px;margin:8px 0 2px' }, 'Просмотры за 30 минут'),
+            columnChart(minutes, null, 90, 'просмотров', minuteLabel),
+            rt.pages.length ? el('div', { class: 'table-wrap', style: 'max-height:160px;margin-top:8px' }, el('table', null,
+                el('thead', null, el('tr', null, el('th', null, 'Активная страница'), el('th', null, 'Сейчас'))),
+                el('tbody', null, rt.pages.map(p => el('tr', null, el('td', { class: 'key' }, p.path), el('td', null, fmtInt.format(p.visitors))))))) : null,
+            el('div', { class: 'dim', style: 'font-size:12px;margin:12px 0 2px' }, 'Последние просмотры'),
+            rt.recent.length ? el('div', { class: 'table-wrap', style: 'max-height:220px' }, el('table', null,
+                el('tbody', null, rt.recent.map(v => el('tr', null,
+                    el('td', { class: 'key', title: [v.timezone, v.referrer].filter(Boolean).join(' · ') },
+                        v.path, ' ', el('span', { class: 'dim' },
+                            [v.country ? flag(v.country) + v.country : null, DEVICE_NAMES[v.device] || v.device, v.browser,
+                             v.referrer ? 'из ' + v.referrer : null, v.is_new ? 'новый' : null].filter(Boolean).join(' · '))),
+                    el('td', { class: 'dim' }, v.duration_ms ? duration(v.duration_ms) : ''),
+                    el('td', { class: 'dim' }, fmtClock(v.ts))))))) : emptyState('Пока никого'));
+    }
+
+    function heatmapCard(s) {
+        const counts = new Map(s.heatmap.map(([dow, h, c]) => [dow + ':' + h, c]));
+        const max = Math.max(1, ...s.heatmap.map(x => x[2]));
+        const level = c => c === 0 ? 0 : Math.min(6, 1 + Math.floor(c / max * 5.999));
+        const grid = el('div', { class: 'heatmap' });
+        const wrap = el('div', { class: 'chart', style: 'overflow-x:auto' }, grid);
+        const tip = tooltipFor(wrap);
+
+        grid.append(el('div', { class: 'hl' }));
+        for (let h = 0; h < 24; h++) grid.append(el('div', { class: 'hl' }, h % 3 === 0 ? String(h) : ''));
+        for (const [name, dow] of WEEKDAYS) {
+            grid.append(el('div', { class: 'lbl' }, name));
+            for (let h = 0; h < 24; h++) {
+                const c = counts.get(dow + ':' + h) || 0;
+                const cell = el('div', { class: 'cell', style: 'background:var(--seq-' + level(c) + ')', tabindex: 0 });
+                const show = () => {
+                    const box = cell.getBoundingClientRect();
+                    const outer = wrap.getBoundingClientRect();
+                    tip.show(box.right - outer.left, box.top - outer.top + box.height / 2,
+                        name + ', ' + pad(h) + ':00–' + pad((h + 1) % 24) + ':00', [{ value: fmtInt.format(c), name: 'просмотров' }]);
+                };
+                cell.addEventListener('pointerenter', show);
+                cell.addEventListener('focus', show);
+                cell.addEventListener('pointerleave', tip.hide);
+                cell.addEventListener('blur', tip.hide);
+                grid.append(cell);
+            }
+        }
+        const scale = el('div', { class: 'scale' }, 'меньше',
+            [0, 1, 2, 3, 4, 5, 6].map(i => el('i', { style: 'background:var(--seq-' + i + ')' })), 'больше');
+        return card('Когда заходят', { note: 'Просмотры по дням недели и часам (ваше местное время)' }, wrap, scale);
+    }
+
+    function eventsCard(s) {
+        const otherFilters = Object.keys(state.filters).some(d => d !== 'path');
+        const note = 'Свои события: window.bvTrack(\'имя\', {...}); js_error — ошибки JavaScript у посетителей' +
+            (otherFilters ? '. Здесь действует только фильтр по странице.' : '');
+        if (!s.events.length) return card('События', { note }, emptyState('Событий нет'));
+        return card('События', { note }, el('div', { class: 'table-wrap' }, el('table', null,
+            el('thead', null, el('tr', null, el('th', null, 'Событие'), el('th', null, 'Раз'), el('th', null, 'Посетители'))),
+            el('tbody', null, s.events.map(ev => el('tr', { class: 'clickable', title: 'Показать детали', onclick: () => openEvent(ev.name) },
+                el('td', { class: 'key' }, ev.name),
+                el('td', null, fmtInt.format(ev.count)),
+                el('td', null, fmtInt.format(ev.visitors))))))));
+    }
+
+    async function openEvent(name) {
+        const body = el('div', { class: 'table-wrap' }, emptyState('Загрузка…'));
+        const close = () => back.remove();
+        const back = el('div', { class: 'modal-back', onclick: e => { if (e.target === back) close(); } },
+            el('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true' },
+                el('div', { class: 'card-head' }, el('h2', null, 'Событие: ' + name), el('button', { class: 'ghost', type: 'button', onclick: close }, 'Закрыть')),
+                body));
+        document.body.append(back);
+        const onKey = e => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); } };
+        document.addEventListener('keydown', onKey);
+
+        try {
+            const rows = await api('/event?' + queryString() + '&name=' + encodeURIComponent(name));
+            if (!rows.length) { body.replaceChildren(emptyState()); return; }
+            body.replaceChildren(el('table', null,
+                el('thead', null, el('tr', null, el('th', null, 'Параметры'), el('th', null, 'Раз'), el('th', null, 'Посетители'), el('th', null, 'Последний раз'))),
+                el('tbody', null, rows.map(r => {
+                    let text = r.props || '—';
+                    try { if (r.props) text = JSON.stringify(JSON.parse(r.props), null, 1); } catch (e) { /* keep raw */ }
+                    return el('tr', null,
+                        el('td', { class: 'props' }, text),
+                        el('td', null, fmtInt.format(r.count)),
+                        el('td', null, fmtInt.format(r.visitors)),
+                        el('td', { class: 'dim' }, fmtClock(r.last_ts)));
+                }))));
+        } catch (e) {
+            body.replaceChildren(emptyState('Ошибка загрузки'));
+        }
+    }
+
+    function apiCard(s) {
+        const a = s.api;
+        const filtersNote = Object.keys(state.filters).length ? ' Фильтры сюда не применяются.' : '';
+        const note = 'Запросы к API сервера: количество, ошибки и время ответа.' + filtersNote;
+        if (!a.routes.length) return card('API сервера', { wide: true, note }, emptyState());
+
+        const points = fillSeries(a.series, s.from, s.to, s.bucket, ['count', 'errors'])
+            .map(p => ({ t: p.t, value: p.count, extra: p.errors ? [{ color: 'var(--bad)', value: fmtInt.format(p.errors), name: 'ошибок 5xx' }] : [] }));
+        const statuses = el('div', { class: 'legend', style: 'margin:10px 0 4px' },
+            a.statuses.map(([code, count]) => el('span', null, el('b', { style: code >= 500 ? 'color:var(--bad)' : '' }, String(code)), ' — ' + fmtInt.format(count))));
+
+        return card('API сервера', { wide: true, note },
+            columnChart(points, s.bucket, 160, 'запросов', d => fmtBucketTitle(d.t, s.bucket)),
+            statuses,
+            el('div', { class: 'table-wrap' }, el('table', null,
+                el('thead', null, el('tr', null,
+                    el('th', null, 'Маршрут'), el('th', null, 'Запросов'), el('th', null, 'Ср. ответ'),
+                    el('th', null, 'Макс.'), el('th', null, '4xx'), el('th', null, '5xx'))),
+                el('tbody', null, a.routes.map(r => el('tr', null,
+                    el('td', { class: 'key' }, r.route),
+                    el('td', null, fmtInt.format(r.count)),
+                    el('td', null, Math.round(r.avg_ms) + ' мс'),
+                    el('td', null, fmtInt.format(r.max_ms) + ' мс'),
+                    el('td', { class: r.client_errors ? '' : 'dim' }, fmtInt.format(r.client_errors)),
+                    el('td', { style: r.server_errors ? 'color:var(--bad);font-weight:600' : '', class: r.server_errors ? '' : 'dim' }, fmtInt.format(r.server_errors))))))));
+    }
+
+    // ---------- Boot ----------
+    fetch(API + '/session', { credentials: 'same-origin', cache: 'no-store' })
+        .then(r => r.ok ? showApp() : showLogin())
+        .catch(showLogin);
+})();
+</script>
+</body>
+</html>

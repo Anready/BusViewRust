@@ -2643,7 +2643,7 @@ class BusRoutesApp {
     getNewToken() {
         const self = this;
         turnstile.render("#turnstile-hidden", {
-            sitekey: "1x00000000000000000000AA",
+            sitekey: "0x4AAAAAABnMxVgaDy9FGODL",
             callback: async function (token) {
                 await self.verifyAndGetAccess(token);
             }

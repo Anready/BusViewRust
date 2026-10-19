@@ -1,12 +1,14 @@
 mod controllers;
 mod helpers;
 mod emulation;
+mod analytics;
 
 use std::sync::{Arc, Mutex};
 use axum::{routing::get, Router};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get_service, post};
+use axum::middleware;
 use tower_http::services::{ServeDir, ServeFile};
 use crate::emulation::emulation::Emulation;
 use crate::emulation::structures::{CacheData, CacheDataDepartures};
@@ -33,6 +35,14 @@ pub struct ServerData {
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().ok();
+
+    // `BusView-Rust hash-password` reads a password from stdin and prints the value for ANALYTICS_PASSWORD_HASH
+    if std::env::args().nth(1).as_deref() == Some("hash-password") {
+        hash_password();
+        return;
+    }
+
+    let analytics = analytics::Analytics::new();
 
     let server_data = Arc::new(ServerData {
         limassol: tokio::sync::RwLock::new(Emulation::new(6).await),
@@ -64,6 +74,8 @@ async fn main() {
         .route("/api/verify-human", post(controllers::access::verify_and_issue_token))
         .route("/api/validate-token", post(controllers::access::verify_token))
         .with_state(server_data.clone())
+        .merge(analytics::router(analytics.clone()))
+        .route_layer(middleware::from_fn_with_state(analytics, analytics::track_api))
         .fallback_service(ServeFile::new("./static/error/404.html"));
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8443")
@@ -72,6 +84,25 @@ async fn main() {
 
     println!("Listening.. ");
     axum::serve(listener, app).await.unwrap();
+}
+
+fn hash_password() {
+    use argon2::password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
+
+    let mut password = String::new();
+    std::io::stdin().read_line(&mut password).expect("failed to read password from stdin");
+    let password = password.trim_end_matches(['\r', '\n']);
+    if password.is_empty() {
+        eprintln!("Empty password");
+        std::process::exit(1);
+    }
+
+    let salt = SaltString::generate(&mut OsRng);
+    let hash = argon2::Argon2::default()
+        .hash_password(password.as_bytes(), &salt)
+        .expect("failed to hash password");
+    // Single quotes stop dotenv from expanding the `$` separators
+    println!("ANALYTICS_PASSWORD_HASH='{hash}'");
 }
 
 impl IntoResponse for Errors {
