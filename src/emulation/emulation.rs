@@ -13,6 +13,7 @@ pub(crate) struct Emulation {
     all_shapes: HashMap<u128, Vec<Shape>>,
     all_route_trips: HashMap<u128, Trip>,
     all_days_ids: HashMap<u128, u128>,
+    service_day_types: HashMap<u128, Vec<&'static str>>,
 }
 
 impl Emulation {
@@ -27,7 +28,8 @@ impl Emulation {
             all_stop_times: HashMap::new(),
             all_shapes: HashMap::new(),
             all_route_trips: HashMap::new(),
-            all_days_ids: HashMap::new()
+            all_days_ids: HashMap::new(),
+            service_day_types: HashMap::new()
         };
 
         if !path.exists() {
@@ -76,7 +78,12 @@ impl Emulation {
     async fn load_all_ids(&mut self) {
         self.all_days_ids.clear();
 
+        self.service_day_types.clear();
+
         let date_ids: Vec<CalendarDateRow> = load_from_disk(self.emulation_id, "calendar_dates").await;
+
+        // Count how often each service runs on weekdays / Saturdays / Sundays
+        let mut day_counts: HashMap<u128, [u32; 3]> = HashMap::new();
 
         for date_id in date_ids {
             let id = date_id.service_id;
@@ -85,6 +92,28 @@ impl Emulation {
             if !self.all_days_ids.contains_key(&id) || is_today(date) {
                 self.all_days_ids.insert(id, date);
             }
+
+            let idx = match Self::get_date_id(date) {
+                "2" => 1,
+                "3" => 2,
+                _ => 0,
+            };
+            day_counts.entry(id).or_insert([0; 3])[idx] += 1;
+        }
+
+        // Normalize per single day (weekdays = 5 days) and drop rare exceptions like holidays
+        for (id, counts) in day_counts {
+            let per_day = [counts[0] as f64 / 5.0, counts[1] as f64, counts[2] as f64];
+            let max = per_day.iter().cloned().fold(0.0, f64::max);
+
+            let types: Vec<&'static str> = ["1", "2", "3"]
+                .into_iter()
+                .zip(per_day)
+                .filter(|(_, v)| *v > 0.0 && *v >= max * 0.5)
+                .map(|(t, _)| t)
+                .collect();
+
+            self.service_day_types.insert(id, types);
         }
     }
 
@@ -98,6 +127,7 @@ impl Emulation {
             let date = self.all_days_ids.get(&route_trip.service_id).copied().unwrap_or(0);
             let trip = Trip {
                 route_id: route_trip.route_id,
+                service_id: route_trip.service_id,
                 departure_date: date,
             };
             self.all_route_trips.insert(route_trip.trip_id, trip);
@@ -246,25 +276,31 @@ impl Emulation {
         for (id, stop_time_list) in &self.all_stop_times {
             let first_stop = stop_time_list.first().expect("Stop list is empty");
 
-            let route_id = self.all_route_trips
+            let trip = self.all_route_trips
                 .get(&id)
-                .expect("Route not found")
-                .route_id;
+                .expect("Route not found");
 
             let current_stop_time = first_stop.departure_time;
 
-            let date_id = self.get_date_id(first_stop.departure_date);
-            let full_line = format!("{}_{}", date_id, current_stop_time);
+            let times = all_times.entry(trip.route_id).or_insert_with(HashSet::new);
 
-            all_times.entry(route_id)
-                .or_insert_with(HashSet::new)
-                .insert(full_line);
+            match self.service_day_types.get(&trip.service_id) {
+                Some(types) if !types.is_empty() => {
+                    for date_id in types {
+                        times.insert(format!("{}_{}", date_id, current_stop_time));
+                    }
+                }
+                _ => {
+                    let date_id = Self::get_date_id(first_stop.departure_date);
+                    times.insert(format!("{}_{}", date_id, current_stop_time));
+                }
+            }
         }
 
         all_times
     }
 
-    fn get_date_id(&self, date: u128) -> &'static str {
+    fn get_date_id(date: u128) -> &'static str {
         let datetime = DateTime::from_timestamp_millis(date as i64).unwrap();
         match datetime.weekday() {
             Weekday::Sat => "2",

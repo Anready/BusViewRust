@@ -23,6 +23,7 @@ pub struct Shape {
 
 pub struct Trip {
     pub route_id: u128,
+    pub service_id: u128,
     pub departure_date: u128,
 }
 
