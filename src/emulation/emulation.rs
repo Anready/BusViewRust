@@ -67,12 +67,24 @@ impl Emulation {
     async fn update(&mut self) {
         self.last_time_updated = get_time();
 
-        let a = crate::helpers::update_data::download_and_unzip(self.emulation_id);
-
-        if a.await.is_ok() {
-            println!("{}", self.emulation_id);
-            self.load_data().await;
+        const ATTEMPTS: u32 = 3;
+        for attempt in 1..=ATTEMPTS {
+            match crate::helpers::update_data::download_and_unzip(self.emulation_id).await {
+                Ok(()) => {
+                    println!("GTFS {}: updated", self.emulation_id);
+                    break;
+                }
+                Err(e) => {
+                    eprintln!("GTFS {}: update attempt {attempt}/{ATTEMPTS} failed: {e}", self.emulation_id);
+                    if attempt < ATTEMPTS {
+                        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+                    }
+                }
+            }
         }
+
+        // Either the fresh feed or, if every download failed, the previous one still on disk
+        self.load_data().await;
     }
 
     async fn load_all_ids(&mut self) {
